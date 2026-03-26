@@ -3,8 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "lobster-roll-mcp": "./dist/index.js"
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
   }
 }

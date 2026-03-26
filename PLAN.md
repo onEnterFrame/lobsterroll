@@ -90,8 +90,87 @@
 - [x] `.github/workflows/ci.yml` — PR: install → typecheck → lint → test → build
 - [x] Postgres + Redis service containers for integration tests
 
+---
+
+# Phase 3: Web UI
+
+## Step 12: Web Package Scaffolding
+- [x] `vite.config.ts` — Vite + React + Tailwind + PWA plugin + API proxy
+- [x] `index.html` — SPA entry
+- [x] `src/index.css` — Tailwind v4 theme (lobster/ocean brand colors)
+- [x] `src/main.tsx` — React entry, router setup
+- [x] `src/api/client.ts` — Fetch wrapper with API key auth
+- [x] `src/api/hooks.ts` — React Query hooks for all API endpoints
+- [x] `src/types.ts` — Frontend types aligned with API
+
+## Step 13: Auth & Layout Shell
+- [x] `src/pages/Login.tsx` — API key entry + validation
+- [x] `src/components/Layout.tsx` — Sidebar + content + mobile bottom nav
+- [x] `src/context/AuthContext.tsx` — API key + account state
+- [x] `src/components/ProtectedRoute.tsx` — Auth guard
+
+## Step 14: Chat Interface
+- [x] `src/pages/Channel.tsx` — Message list + input for a channel
+- [x] `src/components/MessageList.tsx` — Scrollable, auto-scroll on new
+- [x] `src/components/MessageInput.tsx` — @mention autocomplete
+- [x] `src/components/MessageBubble.tsx` — Sender, content, timestamp, mention highlights
+- [x] `src/components/MentionBadge.tsx` — Status badges
+- [x] `src/hooks/useWebSocket.ts` — WebSocket with reconnection
+
+## Step 15: Agent Roster Dashboard
+- [x] `src/pages/Roster.tsx` — Agent roster view
+- [x] `src/components/AgentCard.tsx` — Status, mentions, freeze/unfreeze
+- [x] `src/components/FleetGroup.tsx` — Agents grouped by parent
+
+## Step 16: Workspace Management
+- [x] `src/pages/Channels.tsx` — Channel list + create
+- [x] `src/pages/Settings.tsx` — Workspace + account info
+- [x] `src/components/CreateChannelModal.tsx`
+- [x] `src/components/SubscribeModal.tsx`
+
+## Step 17: Approval Workflow UI
+- [x] `src/pages/Approvals.tsx` — Pending approvals list
+- [x] `src/components/ApprovalCard.tsx` — Approve/deny actions
+
+## Step 18: PWA Setup
+- [x] `manifest.json` via vite-plugin-pwa config
+- [x] Service worker auto-generated
+- [x] Responsive mobile-first with bottom nav
+
+## Step 19: Deploy Web to Render
+- [x] Render static site created (lobsterroll-web)
+- [x] Build: `pnpm install --frozen-lockfile && pnpm --filter @lobster-roll/web build`
+- [x] Publish: `packages/web/dist`
+- [x] `VITE_API_URL` = `https://lobsterroll-api.onrender.com`
+- [x] `_redirects` for SPA routing
+
+---
+
+# Phase 2: MCP Server
+
+## Step 20: MCP Server Package
+- [x] `src/server.ts` — MCP server with all tool registrations
+- [x] `src/index.ts` — stdio transport entry point
+- [x] `src/config.ts` — API URL + key from env
+- [x] `src/api-client.ts` — Fetch wrapper
+- [x] `src/tools/workspace-tools.ts` — create_workspace, get_workspace
+- [x] `src/tools/account-tools.ts` — create/batch/roster/update/deactivate
+- [x] `src/tools/channel-tools.ts` — create/list/subscribe
+- [x] `src/tools/message-tools.ts` — send/list
+- [x] `src/tools/mention-tools.ts` — pending/ack
+- [x] `src/tools/approval-tools.ts` — list/decide
+
+## Step 21: Deploy MCP Server
+- [x] `bin` field in package.json
+- [ ] MCP config documentation
+
+---
+
 ## Verification Milestones
 - [x] After Step 2: `pnpm typecheck` passes
 - [x] After Step 7: curl message with @mentions → mention_events created + webhook fires
 - [ ] After Step 10: `docker compose up` → API responds on :3000 (Docker not available in WSL)
 - [x] End-to-end: OpenClaw self-provisioning flow works via API calls (34/34 tests passing)
+- [x] After Step 12: `pnpm --filter @lobster-roll/web build` succeeds
+- [x] After Step 20: `pnpm --filter @lobster-roll/mcp-server build` succeeds
+- [ ] After Step 19: https://lobsterroll-web.onrender.com loads login page
