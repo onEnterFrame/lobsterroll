@@ -12,12 +12,15 @@ import {
   ErrorCodes,
   setupWorkspaceSchema,
   acceptInvitationSchema,
+  agentJoinSchema,
   DEFAULT_HUMAN_PERMISSIONS,
+  DEFAULT_AGENT_PERMISSIONS,
   type PermissionScope,
 } from '@lobster-roll/shared';
 import { requireSupabaseUser } from '../middleware/require-supabase-user.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { generateApiKey } from '../utils/api-key.js';
+import { generateProvisionToken } from '../utils/provision-token.js';
 import { InvitationService } from '../services/invitation.service.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
@@ -98,6 +101,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             name: body.workspaceName,
             slug: body.slug,
             ownerId: supabaseUserId,
+            agentProvisionToken: generateProvisionToken(),
           })
           .returning();
 
@@ -267,6 +271,100 @@ export default async function authRoutes(fastify: FastifyInstance) {
         .where(eq(accounts.id, id));
 
       return reply.send({ apiKey: raw });
+    },
+  );
+
+  /**
+   * POST /v1/auth/agent-join — Public endpoint for agent self-provisioning.
+   * No auth required; the provision token IS the auth.
+   */
+  fastify.post(
+    '/v1/auth/agent-join',
+    {
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = agentJoinSchema.parse(request.body);
+
+      // Look up workspace by provision token
+      const [workspace] = await fastify.db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.agentProvisionToken, body.provisionToken))
+        .limit(1);
+
+      if (!workspace) {
+        throw new AppError(
+          ErrorCodes.INVALID_PROVISION_TOKEN,
+          'Invalid provision token',
+          401,
+        );
+      }
+
+      // Block if provisioning is locked
+      if (workspace.provisioningMode === 'locked') {
+        throw new AppError(
+          ErrorCodes.AGENT_PROVISION_DISABLED,
+          'Agent provisioning is disabled for this workspace',
+          403,
+        );
+      }
+
+      // Create agent account + API key + subscribe to public channels
+      const result = await fastify.db.transaction(async (tx) => {
+        const { raw, hashed } = generateApiKey();
+
+        const [account] = await tx
+          .insert(accounts)
+          .values({
+            workspaceId: workspace.id,
+            displayName: body.displayName,
+            accountType: 'agent',
+            authMethod: 'api_key',
+            apiKeyHash: hashed,
+            permissions: DEFAULT_AGENT_PERMISSIONS,
+            metadata: body.metadata ?? {},
+          })
+          .returning();
+
+        // Subscribe to all public channels
+        const publicChannels = await tx
+          .select({ id: channels.id })
+          .from(channels)
+          .where(
+            and(
+              eq(channels.workspaceId, workspace.id),
+              eq(channels.visibility, 'public'),
+            ),
+          );
+
+        if (publicChannels.length > 0) {
+          await tx.insert(channelSubscriptions).values(
+            publicChannels.map((ch) => ({
+              channelId: ch.id,
+              accountId: account.id,
+              role: 'member' as const,
+            })),
+          );
+        }
+
+        return { account, apiKey: raw };
+      });
+
+      return reply.status(201).send({
+        account: result.account,
+        apiKey: result.apiKey,
+        workspace: {
+          id: workspace.id,
+          name: workspace.name,
+          slug: workspace.slug,
+        },
+      });
     },
   );
 }

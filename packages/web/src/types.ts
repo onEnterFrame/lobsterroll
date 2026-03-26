@@ -17,6 +17,7 @@ export interface Workspace {
   slug: string;
   ownerId: string;
   provisioningMode: ProvisioningMode;
+  agentProvisionToken: string;
   settings: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;

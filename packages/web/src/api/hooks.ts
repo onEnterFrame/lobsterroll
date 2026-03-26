@@ -172,3 +172,17 @@ export function useGenerateApiKey() {
     mutationFn: () => api.post<{ apiKey: string }>('/v1/auth/generate-api-key'),
   });
 }
+
+// ─── Agent Provision Token ────────────────────────────────────────
+
+export function useRotateProvisionToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (workspaceId: string) =>
+      api.post<{ agentProvisionToken: string }>(
+        `/v1/workspaces/${workspaceId}/rotate-provision-token`,
+      ),
+    onSuccess: (_data, workspaceId) =>
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId] }),
+  });
+}

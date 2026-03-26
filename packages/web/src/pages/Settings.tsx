@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useWorkspace, useInvitations, useCreateInvitation, useRevokeInvitation, useGenerateApiKey } from '@/api/hooks';
+import { useWorkspace, useInvitations, useCreateInvitation, useRevokeInvitation, useGenerateApiKey, useRotateProvisionToken } from '@/api/hooks';
 
 export function Settings() {
   const { currentAccount, workspaceId } = useAuth();
@@ -72,6 +72,11 @@ export function Settings() {
         {/* API Key generation */}
         <ApiKeySection />
 
+        {/* Agent invite (admin only) */}
+        {currentAccount?.permissions?.includes('workspace:admin') && workspace && (
+          <AgentInviteSection workspace={workspace} />
+        )}
+
         {/* Invite teammates (admin only) */}
         {currentAccount?.permissions?.includes('workspace:admin') && (
           <InviteSection workspaceId={workspaceId!} />
@@ -138,6 +143,86 @@ function ApiKeySection() {
           {generateApiKey.isPending ? 'Generating...' : 'Generate API Key'}
         </button>
       )}
+    </section>
+  );
+}
+
+function AgentInviteSection({ workspace }: { workspace: import('@/types').Workspace }) {
+  const rotateToken = useRotateProvisionToken();
+  const [copied, setCopied] = useState(false);
+  const [confirmRotate, setConfirmRotate] = useState(false);
+
+  const apiBase = import.meta.env.VITE_API_URL || window.location.origin;
+  const webBase = window.location.origin;
+
+  const oneLiner = `Read ${webBase}/agent-setup.md then POST to ${apiBase}/v1/auth/agent-join with {"provisionToken":"${workspace.agentProvisionToken}","displayName":"YOUR_AGENT_NAME"}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(oneLiner);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRotate = async () => {
+    try {
+      await rotateToken.mutateAsync(workspace.id);
+      setConfirmRotate(false);
+    } catch {
+      // error shown by mutation
+    }
+  };
+
+  return (
+    <section className="rounded-xl bg-ocean-light border border-white/5 p-5 mb-6">
+      <h2 className="text-sm font-semibold text-white/80 mb-4">Invite Agent</h2>
+      <p className="text-white/50 text-sm mb-4">
+        Copy this one-liner and paste it to any AI agent to let it self-provision into your workspace.
+      </p>
+
+      <div className="rounded-lg bg-ocean p-3 border border-white/10 mb-3">
+        <code className="text-xs text-lobster break-all whitespace-pre-wrap leading-relaxed">{oneLiner}</code>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={handleCopy}
+          className="rounded-lg bg-ocean border border-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/5"
+        >
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+
+      {/* Rotate provision token */}
+      <div className="border-t border-white/5 pt-4">
+        <p className="text-white/40 text-xs mb-2">
+          Rotating the token invalidates the previous one. Existing agents are not affected.
+        </p>
+        {confirmRotate ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-status-warn">Are you sure?</span>
+            <button
+              onClick={handleRotate}
+              disabled={rotateToken.isPending}
+              className="rounded bg-status-danger/20 text-status-danger px-3 py-1 text-xs hover:bg-status-danger/30 transition disabled:opacity-50"
+            >
+              {rotateToken.isPending ? 'Rotating...' : 'Yes, rotate'}
+            </button>
+            <button
+              onClick={() => setConfirmRotate(false)}
+              className="rounded bg-white/10 px-3 py-1 text-xs text-white hover:bg-white/20 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmRotate(true)}
+            className="rounded bg-white/10 px-3 py-1 text-xs text-white/60 hover:bg-white/20 hover:text-white transition"
+          >
+            Rotate provision token
+          </button>
+        )}
+      </div>
     </section>
   );
 }

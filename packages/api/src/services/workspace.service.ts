@@ -3,6 +3,7 @@ import { workspaces } from '@lobster-roll/db';
 import { AppError, ErrorCodes } from '@lobster-roll/shared';
 import type { CreateWorkspaceInput } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
+import { generateProvisionToken } from '../utils/provision-token.js';
 
 export class WorkspaceService {
   constructor(private db: Database) {}
@@ -27,6 +28,7 @@ export class WorkspaceService {
         ownerId,
         provisioningMode: input.provisioningMode,
         settings: input.settings,
+        agentProvisionToken: generateProvisionToken(),
       })
       .returning();
 

@@ -57,11 +57,15 @@ export const workspaces = pgTable(
     slug: text('slug').notNull(),
     ownerId: text('owner_id').notNull(),
     provisioningMode: provisioningModeEnum('provisioning_mode').notNull().default('open'),
+    agentProvisionToken: text('agent_provision_token').notNull(),
     settings: jsonb('settings').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex('workspaces_slug_idx').on(table.slug)],
+  (table) => [
+    uniqueIndex('workspaces_slug_idx').on(table.slug),
+    uniqueIndex('workspaces_agent_provision_token_idx').on(table.agentProvisionToken),
+  ],
 );
 
 export const accounts = pgTable(
