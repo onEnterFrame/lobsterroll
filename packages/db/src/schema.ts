@@ -36,7 +36,7 @@ export const mentionStatusEnum = pgEnum('mention_status', [
   'timed_out',
 ]);
 
-export const callbackMethodEnum = pgEnum('callback_method', ['webhook', 'websocket', 'poll']);
+export const callbackMethodEnum = pgEnum('callback_method', ['webhook', 'websocket', 'poll', 'openclaw']);
 
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'denied']);
 
