@@ -231,17 +231,23 @@ export class AccountService {
       .from(accounts)
       .where(eq(accounts.workspaceId, workspaceId));
 
-    // Group by owner/parent
-    const grouped = new Map<string | null, typeof allAccounts>();
+    // Build parent→children map
+    const childrenMap = new Map<string, typeof allAccounts>();
+    const topLevel: typeof allAccounts = [];
+
     for (const account of allAccounts) {
-      const key = account.parentId;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(account);
+      if (account.parentId) {
+        if (!childrenMap.has(account.parentId)) childrenMap.set(account.parentId, []);
+        childrenMap.get(account.parentId)!.push(account);
+      } else {
+        topLevel.push(account);
+      }
     }
 
-    return {
-      accounts: allAccounts,
-      grouped: Object.fromEntries(grouped),
-    };
+    // Return RosterEntry[] — top-level accounts with nested children
+    return topLevel.map((account) => ({
+      ...account,
+      children: childrenMap.get(account.id) ?? [],
+    }));
   }
 }
