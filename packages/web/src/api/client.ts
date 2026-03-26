@@ -11,6 +11,8 @@ export class ApiError extends Error {
   }
 }
 
+// ─── API Key auth (legacy / agent path) ────────────────────────────
+
 function getApiKey(): string | null {
   return localStorage.getItem('lr_api_key');
 }
@@ -27,6 +29,34 @@ export function hasApiKey(): boolean {
   return !!localStorage.getItem('lr_api_key');
 }
 
+// ─── Bearer token auth (Supabase JWT path) ─────────────────────────
+
+let authToken: string | null = null;
+let selectedWorkspaceId: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
+export function setSelectedWorkspaceId(id: string | null) {
+  selectedWorkspaceId = id;
+  if (id) {
+    localStorage.setItem('lr_workspace_id', id);
+  } else {
+    localStorage.removeItem('lr_workspace_id');
+  }
+}
+
+export function getSelectedWorkspaceId(): string | null {
+  return selectedWorkspaceId ?? localStorage.getItem('lr_workspace_id');
+}
+
+// ─── Core request function ──────────────────────────────────────────
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const apiKey = getApiKey();
   const headers: Record<string, string> = {
@@ -36,6 +66,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (apiKey) {
     headers['x-api-key'] = apiKey;
+  } else if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    const wsId = getSelectedWorkspaceId();
+    if (wsId) {
+      headers['X-Workspace-Id'] = wsId;
+    }
   }
 
   const res = await fetch(`${API_URL}${path}`, {
@@ -61,16 +97,18 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
-// WebSocket connection
+// ─── WebSocket connection ───────────────────────────────────────────
+
 export function createWsConnection(onEvent: (event: unknown) => void): WebSocket | null {
   const apiKey = getApiKey();
-  if (!apiKey) return null;
+  const token = apiKey ?? authToken;
+  if (!token) return null;
 
   const wsBase = API_URL
     ? API_URL.replace(/^http/, 'ws')
     : `ws://${window.location.host}`;
 
-  const ws = new WebSocket(`${wsBase}/ws/events?token=${encodeURIComponent(apiKey)}`);
+  const ws = new WebSocket(`${wsBase}/ws/events?token=${encodeURIComponent(token)}`);
 
   ws.onmessage = (e) => {
     try {
@@ -81,7 +119,6 @@ export function createWsConnection(onEvent: (event: unknown) => void): WebSocket
     }
   };
 
-  // Keepalive ping every 30s
   let pingInterval: ReturnType<typeof setInterval>;
   ws.onopen = () => {
     pingInterval = setInterval(() => {

@@ -2,9 +2,9 @@ import { Navigate, Outlet } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 
 export function ProtectedRoute() {
-  const { currentAccount, isLoading } = useAuth();
+  const { mode, currentAccount, isLoading } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || mode === 'loading') {
     return (
       <div className="flex h-screen items-center justify-center bg-ocean">
         <div className="text-center">
@@ -13,6 +13,14 @@ export function ProtectedRoute() {
         </div>
       </div>
     );
+  }
+
+  if (mode === 'unauthenticated') {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (mode === 'needs-onboarding') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (!currentAccount) {

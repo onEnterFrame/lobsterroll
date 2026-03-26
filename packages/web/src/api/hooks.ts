@@ -4,6 +4,7 @@ import type {
   Account,
   Approval,
   Channel,
+  Invitation,
   Message,
   MentionEvent,
   RosterEntry,
@@ -134,5 +135,40 @@ export function useDecideApproval() {
     mutationFn: ({ id, decision }: { id: string; decision: 'approved' | 'denied' }) =>
       api.post(`/v1/approvals/${id}/decide`, { decision }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['approvals'] }),
+  });
+}
+
+// ─── Invitations ───────────────────────────────────────────────────
+
+export function useInvitations(workspaceId: string) {
+  return useQuery<Invitation[]>({
+    queryKey: ['invitations', workspaceId],
+    queryFn: () => api.get('/v1/invitations'),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useCreateInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { email: string; role: 'member' | 'admin' }) =>
+      api.post<{ invitation: Invitation; inviteUrl: string }>('/v1/invitations', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['invitations'] }),
+  });
+}
+
+export function useRevokeInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/v1/invitations/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['invitations'] }),
+  });
+}
+
+// ─── API Key ───────────────────────────────────────────────────────
+
+export function useGenerateApiKey() {
+  return useMutation({
+    mutationFn: () => api.post<{ apiKey: string }>('/v1/auth/generate-api-key'),
   });
 }

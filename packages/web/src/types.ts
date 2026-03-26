@@ -91,6 +91,21 @@ export interface Approval {
   updatedAt: string;
 }
 
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+export type InvitationRole = 'member' | 'admin';
+
+export interface Invitation {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: InvitationRole;
+  invitedBy: string | null;
+  token: string;
+  status: InvitationStatus;
+  expiresAt: string;
+  createdAt: string;
+}
+
 // Roster API returns accounts grouped by parent
 export interface RosterEntry extends Account {
   children?: Account[];

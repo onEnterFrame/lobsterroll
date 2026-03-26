@@ -6,3 +6,4 @@ export * from './mention.js';
 export * from './approval.js';
 export * from './agent-callback.js';
 export * from './permissions.js';
+export * from './invitation.js';

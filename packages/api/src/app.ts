@@ -20,6 +20,8 @@ import messageRoutes from './routes/messages.js';
 import mentionRoutes from './routes/mentions.js';
 import fileRoutes from './routes/files.js';
 import approvalRoutes from './routes/approvals.js';
+import authRoutes from './routes/auth.js';
+import invitationRoutes from './routes/invitations.js';
 
 export async function createApp(config: Config) {
   const app = Fastify({
@@ -69,6 +71,8 @@ export async function createApp(config: Config) {
   await app.register(mentionRoutes);
   await app.register(fileRoutes);
   await app.register(approvalRoutes);
+  await app.register(authRoutes);
+  await app.register(invitationRoutes);
 
   return app;
 }

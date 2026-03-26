@@ -9,6 +9,7 @@ import {
   agentCallbacks,
   approvals,
   auditLog,
+  invitations,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -16,6 +17,7 @@ export const workspacesRelations = relations(workspaces, ({ many }) => ({
   channels: many(channels),
   approvals: many(approvals),
   auditLog: many(auditLog),
+  invitations: many(invitations),
 }));
 
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
@@ -103,5 +105,16 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
   workspace: one(workspaces, {
     fields: [auditLog.workspaceId],
     references: [workspaces.id],
+  }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [invitations.workspaceId],
+    references: [workspaces.id],
+  }),
+  inviter: one(accounts, {
+    fields: [invitations.invitedBy],
+    references: [accounts.id],
   }),
 }));

@@ -40,6 +40,13 @@ export const callbackMethodEnum = pgEnum('callback_method', ['webhook', 'websock
 
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'denied']);
 
+export const invitationStatusEnum = pgEnum('invitation_status', [
+  'pending',
+  'accepted',
+  'expired',
+  'revoked',
+]);
+
 // ── Tables ─────────────────────────────────────────────────────────────
 
 export const workspaces = pgTable(
@@ -193,6 +200,28 @@ export const approvals = pgTable(
   },
   (table) => [
     index('approvals_workspace_id_status_idx').on(table.workspaceId, table.status),
+  ],
+);
+
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: subscriptionRoleEnum('role').notNull().default('member'),
+    invitedBy: uuid('invited_by').references(() => accounts.id),
+    token: text('token').notNull(),
+    status: invitationStatusEnum('status').notNull().default('pending'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('invitations_token_idx').on(table.token),
+    index('invitations_email_idx').on(table.email),
+    index('invitations_workspace_id_idx').on(table.workspaceId),
   ],
 );
 

@@ -19,5 +19,6 @@ declare module 'fastify' {
       status: string;
     } | null;
     workspaceId: string | null;
+    supabaseUser: { id: string; email: string } | null;
   }
 }

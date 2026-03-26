@@ -15,6 +15,7 @@ const envSchema = z.object({
   API_PORT: z.coerce.number().default(3000),
   API_LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   MENTION_TIMEOUT_MS: z.coerce.number().default(300_000),
+  WEB_URL: z.string().default('http://localhost:5173'),
 });
 
 export type Config = z.infer<typeof envSchema>;

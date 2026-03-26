@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { accounts } from '@lobster-roll/db';
 import { AppError, ErrorCodes } from '@lobster-roll/shared';
 import { hashApiKey } from '../utils/api-key.js';
@@ -28,16 +28,15 @@ async function resolveAccountFromApiKey(fastify: FastifyInstance, apiKey: string
   return account;
 }
 
-async function resolveAccountFromJwt(fastify: FastifyInstance, token: string) {
-  // For Phase 1, we do a simplified JWT check.
-  // In production, this would use Supabase Auth to verify the JWT
-  // and then resolve the user's account.
-  // For now, we look up accounts by the ownerId matching the sub claim.
+async function resolveAccountFromJwt(
+  fastify: FastifyInstance,
+  token: string,
+  workspaceIdHeader?: string,
+) {
   if (!fastify.config.SUPABASE_URL || !fastify.config.SUPABASE_SERVICE_ROLE_KEY) {
     throw new AppError(ErrorCodes.UNAUTHORIZED, 'Supabase auth not configured', 401);
   }
 
-  // Dynamically import supabase to avoid errors when not configured
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(
     fastify.config.SUPABASE_URL,
@@ -53,17 +52,36 @@ async function resolveAccountFromJwt(fastify: FastifyInstance, token: string) {
     throw new AppError(ErrorCodes.UNAUTHORIZED, 'Invalid JWT', 401);
   }
 
-  const [account] = await fastify.db
+  // Query all active accounts for this user
+  const userAccounts = await fastify.db
     .select()
     .from(accounts)
-    .where(eq(accounts.ownerId, user.id))
-    .limit(1);
+    .where(and(eq(accounts.ownerId, user.id), eq(accounts.status, 'active')));
 
-  if (!account) {
+  if (userAccounts.length === 0) {
     throw new AppError(ErrorCodes.ACCOUNT_NOT_FOUND, 'No account linked to this user', 404);
   }
 
-  return account;
+  // If workspace header provided, filter to that workspace
+  if (workspaceIdHeader) {
+    const match = userAccounts.find((a) => a.workspaceId === workspaceIdHeader);
+    if (!match) {
+      throw new AppError(ErrorCodes.ACCOUNT_NOT_FOUND, 'No account in specified workspace', 404);
+    }
+    return match;
+  }
+
+  // Single account — use it
+  if (userAccounts.length === 1) {
+    return userAccounts[0];
+  }
+
+  // Multiple accounts, no header — error
+  throw new AppError(
+    ErrorCodes.VALIDATION_ERROR,
+    'Multiple workspaces found. Set X-Workspace-Id header.',
+    400,
+  );
 }
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
@@ -85,7 +103,8 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
 
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    const account = await resolveAccountFromJwt(request.server, token);
+    const wsHeader = request.headers['x-workspace-id'] as string | undefined;
+    const account = await resolveAccountFromJwt(request.server, token, wsHeader);
     request.currentAccount = {
       id: account.id,
       workspaceId: account.workspaceId,
@@ -104,6 +123,7 @@ export default fp(
   async (fastify: FastifyInstance) => {
     fastify.decorateRequest('currentAccount', null);
     fastify.decorateRequest('workspaceId', null);
+    fastify.decorateRequest('supabaseUser', null);
   },
   { name: 'auth-decorators' },
 );
