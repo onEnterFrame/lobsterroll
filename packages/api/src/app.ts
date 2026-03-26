@@ -24,6 +24,11 @@ import authRoutes from './routes/auth.js';
 import invitationRoutes from './routes/invitations.js';
 import callbackRoutes from './routes/callbacks.js';
 
+// Workers
+import { createMentionDeliveryWorker, MENTION_DELIVERY_JOB_OPTIONS } from './workers/mention-delivery.worker.js';
+import { createMentionTimeoutWorker } from './workers/mention-timeout.worker.js';
+import { connectionManager } from './services/connection-manager.js';
+
 export async function createApp(config: Config) {
   const app = Fastify({
     logger: {
@@ -75,6 +80,14 @@ export async function createApp(config: Config) {
   await app.register(authRoutes);
   await app.register(invitationRoutes);
   await app.register(callbackRoutes);
+
+  // Start background workers after all plugins are registered
+  // (redis and db decorators must be available)
+  app.addHook('onReady', async () => {
+    createMentionDeliveryWorker(app.redis, app.db, connectionManager);
+    createMentionTimeoutWorker(app.redis, app.db);
+    app.log.info('Mention delivery and timeout workers started');
+  });
 
   return app;
 }
