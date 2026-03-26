@@ -1,0 +1,32 @@
+{
+  "name": "lobster-roll",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:api": "pnpm --filter @lobster-roll/api dev",
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @lobster-roll/db generate",
+    "db:migrate": "pnpm --filter @lobster-roll/db migrate"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract"
+    ]
+  }
+}

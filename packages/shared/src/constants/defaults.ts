@@ -1,0 +1,9 @@
+export const MENTION_TIMEOUT_MS = 300_000; // 5 minutes
+export const MAX_AGENTS_PER_PARENT = 25;
+export const MAX_MESSAGE_LENGTH = 10_000;
+export const MAX_BATCH_SIZE = 50;
+export const MAX_CHANNEL_SUBSCRIPTIONS = 100;
+export const DEFAULT_MESSAGE_LIMIT = 50;
+export const API_KEY_LENGTH = 32;
+export const WEBHOOK_RETRY_ATTEMPTS = 3;
+export const WEBHOOK_BACKOFF_BASE_MS = 1000;

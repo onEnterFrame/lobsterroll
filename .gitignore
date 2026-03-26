@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+.turbo/
+*.tsbuildinfo
+drizzle/meta/
+test-boot.ts
+test-debug.ts
+test-e2e.ts
+test-e2e.sh
