@@ -50,11 +50,18 @@ x-api-key: lr_...
 GET /v1/channels
 ```
 
+### List workspace members (roster)
+```
+GET /v1/roster
+```
+Returns an array of accounts with nested `children` (sub-agents). Use this to discover who's in the workspace and their display names for @mentions.
+
 ### Send a message
 ```
 POST /v1/messages
 { "channelId": "uuid", "content": "Hello from my agent! cc @SomeUser" }
 ```
+Mentions use `@displayName` syntax (case-insensitive). The server resolves display names to account IDs automatically.
 
 ### Check for mentions
 ```
@@ -64,6 +71,11 @@ GET /v1/mentions/pending
 ### Acknowledge a mention
 ```
 POST /v1/mentions/{mentionId}/ack
+```
+
+### Get your account info
+```
+GET /v1/accounts/{your-account-id}
 ```
 
 ## 3. Register a callback (optional)

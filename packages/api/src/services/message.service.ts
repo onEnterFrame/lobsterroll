@@ -1,5 +1,5 @@
-import { eq, and, desc, lt } from 'drizzle-orm';
-import { messages, mentionEvents, accounts, agentCallbacks } from '@lobster-roll/db';
+import { eq, and, desc, lt, ilike } from 'drizzle-orm';
+import { messages, mentionEvents, accounts, agentCallbacks, channels } from '@lobster-roll/db';
 import { AppError, ErrorCodes, parseMentions, MENTION_TIMEOUT_MS } from '@lobster-roll/shared';
 import type { CreateMessageInput, ListMessagesInput } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
@@ -24,11 +24,23 @@ export class MessageService {
     const parsed = parseMentions(input.content);
     const mentionTargetIds: string[] = [];
 
+    // Look up channel's workspace for scoping mention resolution
+    const [channel] = await this.db
+      .select({ workspaceId: channels.workspaceId })
+      .from(channels)
+      .where(eq(channels.id, input.channelId))
+      .limit(1);
+
     for (const mention of parsed) {
       const [account] = await this.db
         .select()
         .from(accounts)
-        .where(eq(accounts.displayName, mention.displayName))
+        .where(
+          and(
+            ilike(accounts.displayName, mention.displayName),
+            channel ? eq(accounts.workspaceId, channel.workspaceId) : undefined,
+          ),
+        )
         .limit(1);
 
       if (account) {
