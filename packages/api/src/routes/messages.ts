@@ -36,10 +36,22 @@ export default async function messageRoutes(fastify: FastifyInstance) {
     '/v1/messages',
     { preHandler: [...preHandler, requirePermission('message:read')] },
     async (request, reply) => {
-      const query = listMessagesSchema.parse(request.query);
+      const raw = request.query as Record<string, string>;
+      // Map frontend's 'cursor' param to API's 'before' param
+      if (raw.cursor && !raw.before) {
+        raw.before = raw.cursor;
+      }
+      const query = listMessagesSchema.parse(raw);
       const service = new MessageService(fastify.db, fastify.redis);
       const messagesList = await service.list(query);
-      return reply.send(messagesList);
+
+      // Determine next cursor (last message ID if we got a full page)
+      const nextCursor =
+        messagesList.length === query.limit
+          ? messagesList[messagesList.length - 1].id
+          : null;
+
+      return reply.send({ messages: messagesList, nextCursor });
     },
   );
 }
