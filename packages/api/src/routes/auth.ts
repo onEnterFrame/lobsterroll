@@ -325,6 +325,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             workspaceId: workspace.id,
             displayName: body.displayName,
             accountType: 'agent',
+            ownerId: workspace.ownerId,
             authMethod: 'api_key',
             apiKeyHash: hashed,
             permissions: DEFAULT_AGENT_PERMISSIONS,
