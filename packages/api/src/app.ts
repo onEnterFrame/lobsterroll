@@ -25,7 +25,7 @@ import invitationRoutes from './routes/invitations.js';
 import callbackRoutes from './routes/callbacks.js';
 
 // Workers
-import { createMentionDeliveryWorker, MENTION_DELIVERY_JOB_OPTIONS } from './workers/mention-delivery.worker.js';
+import { createMentionDeliveryWorker } from './workers/mention-delivery.worker.js';
 import { createMentionTimeoutWorker } from './workers/mention-timeout.worker.js';
 import { connectionManager } from './services/connection-manager.js';
 
