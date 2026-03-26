@@ -22,6 +22,7 @@ import fileRoutes from './routes/files.js';
 import approvalRoutes from './routes/approvals.js';
 import authRoutes from './routes/auth.js';
 import invitationRoutes from './routes/invitations.js';
+import callbackRoutes from './routes/callbacks.js';
 
 export async function createApp(config: Config) {
   const app = Fastify({
@@ -73,6 +74,7 @@ export async function createApp(config: Config) {
   await app.register(approvalRoutes);
   await app.register(authRoutes);
   await app.register(invitationRoutes);
+  await app.register(callbackRoutes);
 
   return app;
 }
