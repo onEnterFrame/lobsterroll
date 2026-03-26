@@ -1,5 +1,3 @@
-const MENTION_REGEX = /@([a-zA-Z0-9_.-]+)/g;
-
 export interface ParsedMention {
   raw: string;
   displayName: string;
@@ -7,6 +5,9 @@ export interface ParsedMention {
 }
 
 export function parseMentions(content: string): ParsedMention[] {
+  // Regex must be declared inside the function — a module-scoped /g regex
+  // is stateful (lastIndex persists between calls) causing duplicate/missed matches.
+  const MENTION_REGEX = /@([a-zA-Z0-9_.-]+)/g;
   const mentions: ParsedMention[] = [];
   let match: RegExpExecArray | null;
 

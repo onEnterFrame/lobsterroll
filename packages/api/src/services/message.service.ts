@@ -64,8 +64,10 @@ export class MessageService {
       .returning();
 
     // 3. For each mentioned account: create mention_event + enqueue delivery
+    // Skip self-mentions — agents should not receive mention events for their own messages.
     const events = [];
     for (const targetId of mentionTargetIds) {
+      if (targetId === senderId) continue;
       const [event] = await this.db
         .insert(mentionEvents)
         .values({

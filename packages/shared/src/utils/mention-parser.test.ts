@@ -31,4 +31,13 @@ describe('parseMentions', () => {
     const result = parseMentions('Hey @alice!');
     expect(result[0].index).toBe(4);
   });
+
+  it('is not affected by prior calls (stateful regex guard)', () => {
+    // A module-scoped /g regex retains lastIndex across calls — this test
+    // would fail before the fix and confirms the regression is closed.
+    parseMentions('@alice first call');
+    const result = parseMentions('@bob second call');
+    expect(result).toHaveLength(1);
+    expect(result[0].displayName).toBe('bob');
+  });
 });
