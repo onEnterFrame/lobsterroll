@@ -9,8 +9,7 @@ export default async function healthRoutes(fastify: FastifyInstance) {
     try {
       // Check database
       await fastify.db.execute(
-        // @ts-expect-error raw SQL check
-        { sql: 'SELECT 1', params: [] },
+        { sql: 'SELECT 1', params: [] } as never,
       );
     } catch {
       return reply.status(503).send({ status: 'not_ready', reason: 'database' });
