@@ -84,9 +84,22 @@ export async function createApp(config: Config) {
   // Start background workers after all plugins are registered
   // (redis and db decorators must be available)
   app.addHook('onReady', async () => {
-    createMentionDeliveryWorker(app.redis, app.db, connectionManager);
-    createMentionTimeoutWorker(app.redis, app.db);
-    app.log.info('Mention delivery and timeout workers started');
+    try {
+      const deliveryWorker = createMentionDeliveryWorker(app.redis, app.db, connectionManager);
+      const timeoutWorker = createMentionTimeoutWorker(app.redis, app.db);
+
+      // Prevent unhandled 'error' events from crashing the process
+      deliveryWorker.on('error', (err) => {
+        app.log.error({ err }, 'Mention delivery worker error');
+      });
+      timeoutWorker.on('error', (err) => {
+        app.log.error({ err }, 'Mention timeout worker error');
+      });
+
+      app.log.info('Mention delivery and timeout workers started');
+    } catch (err) {
+      app.log.error({ err }, 'Failed to start mention workers (non-fatal)');
+    }
   });
 
   return app;
