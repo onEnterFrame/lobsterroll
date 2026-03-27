@@ -107,4 +107,13 @@ export class ChannelService {
 
     return !!sub;
   }
+
+  async getSubscriberIds(channelId: string): Promise<string[]> {
+    const subs = await this.db
+      .select({ accountId: channelSubscriptions.accountId })
+      .from(channelSubscriptions)
+      .where(eq(channelSubscriptions.channelId, channelId));
+
+    return subs.map((s) => s.accountId);
+  }
 }

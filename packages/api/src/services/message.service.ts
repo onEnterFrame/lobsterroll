@@ -1,10 +1,11 @@
 import { eq, and, desc, lt, ilike } from 'drizzle-orm';
-import { messages, mentionEvents, accounts, agentCallbacks, channels } from '@lobster-roll/db';
+import { messages, mentionEvents, accounts, agentCallbacks, channels, channelSubscriptions } from '@lobster-roll/db';
 import { AppError, ErrorCodes, parseMentions, MENTION_TIMEOUT_MS } from '@lobster-roll/shared';
 import type { CreateMessageInput, ListMessagesInput } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
 import { Queue } from 'bullmq';
 import type { Redis } from 'ioredis';
+import type { ConnectionManager } from './connection-manager.js';
 
 export class MessageService {
   private mentionDeliveryQueue: Queue;
@@ -14,6 +15,7 @@ export class MessageService {
     private db: Database,
     redis: Redis,
     private timeoutMs = MENTION_TIMEOUT_MS,
+    private connectionManager?: ConnectionManager,
   ) {
     this.mentionDeliveryQueue = new Queue('mention-delivery', { connection: redis });
     this.mentionTimeoutQueue = new Queue('mention-timeout', { connection: redis });
@@ -102,6 +104,17 @@ export class MessageService {
         { mentionEventId: event.id, targetId },
         { delay: this.timeoutMs },
       );
+    }
+
+    // 4. Broadcast message.new to all channel subscribers over WebSocket
+    if (this.connectionManager) {
+      const subs = await this.db
+        .select({ accountId: channelSubscriptions.accountId })
+        .from(channelSubscriptions)
+        .where(eq(channelSubscriptions.channelId, input.channelId));
+
+      const subscriberIds = subs.map((s) => s.accountId);
+      this.connectionManager.broadcast('message.new', message, subscriberIds);
     }
 
     return { message, mentionEvents: events };

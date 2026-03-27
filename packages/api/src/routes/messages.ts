@@ -8,6 +8,7 @@ import { workspaceContext } from '../middleware/workspace-context.js';
 import { requirePermission } from '../middleware/require-permission.js';
 import { MessageService } from '../services/message.service.js';
 import { ChannelService } from '../services/channel.service.js';
+import { connectionManager } from '../services/connection-manager.js';
 
 export default async function messageRoutes(fastify: FastifyInstance) {
   const preHandler = [requireAuth, workspaceContext];
@@ -28,7 +29,7 @@ export default async function messageRoutes(fastify: FastifyInstance) {
         throw new AppError(ErrorCodes.NOT_SUBSCRIBED, 'You are not subscribed to this channel', 403);
       }
 
-      const service = new MessageService(fastify.db, fastify.redis);
+      const service = new MessageService(fastify.db, fastify.redis, undefined, connectionManager);
       const result = await service.send(body, request.currentAccount!.id);
       return reply.status(201).send(result);
     },

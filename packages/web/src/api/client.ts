@@ -112,8 +112,13 @@ export function createWsConnection(onEvent: (event: unknown) => void): WebSocket
 
   ws.onmessage = (e) => {
     try {
-      const event = JSON.parse(e.data);
-      onEvent(event);
+      const raw = JSON.parse(e.data);
+      // Server sends { event, data, timestamp } — normalize to { type, data } for frontend WsEvent
+      const normalized =
+        raw && typeof raw === 'object' && 'event' in raw && !('type' in raw)
+          ? { type: raw.event, data: raw.data, timestamp: raw.timestamp }
+          : raw;
+      onEvent(normalized);
     } catch {
       // ignore parse errors
     }
