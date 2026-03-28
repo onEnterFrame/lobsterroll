@@ -151,9 +151,9 @@ export function Channel() {
 
   useWebSocket(handleWsEvent);
 
-  const handleSend = (content: string) => {
+  const handleSend = (content: string, attachments?: import('@/types').MessageAttachment[]) => {
     if (!channelId) return;
-    sendMessage.mutate({ channelId, content });
+    sendMessage.mutate({ channelId, content, attachments });
   };
 
   const handleTaskUpdate = () => {

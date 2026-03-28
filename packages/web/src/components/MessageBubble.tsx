@@ -3,6 +3,7 @@ import type { Message, Account, ReactionSummary } from '@/types';
 import { useAccountPresence } from '@/hooks/usePresence';
 import { PresenceDot } from './PresenceDot';
 import { ReactionBar } from './ReactionBar';
+import { AttachmentRenderer } from './AttachmentRenderer';
 import { api } from '@/api/client';
 
 interface Props {
@@ -74,6 +75,8 @@ export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpd
           }`}
           dangerouslySetInnerHTML={{ __html: highlightMentions(message.content) }}
         />
+        {/* Attachments */}
+        <AttachmentRenderer attachments={message.attachments} />
         {/* Reactions */}
         <ReactionBar
           messageId={message.id}

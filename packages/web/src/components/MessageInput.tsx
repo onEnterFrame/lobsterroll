@@ -1,17 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Account } from '@/types';
+import type { Account, MessageAttachment } from '@/types';
+import { api } from '@/api/client';
 
 interface Props {
-  onSend: (content: string) => void;
+  onSend: (content: string, attachments?: MessageAttachment[]) => void;
   disabled?: boolean;
   accounts: Account[];
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileIcon(mime: string) {
+  if (mime.startsWith('image/')) return '🖼️';
+  if (mime.startsWith('audio/')) return '🎵';
+  if (mime.startsWith('video/')) return '🎬';
+  if (mime === 'application/pdf') return '📄';
+  return '📎';
 }
 
 export function MessageInput({ onSend, disabled, accounts }: Props) {
   const [value, setValue] = useState('');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [pendingFiles, setPendingFiles] = useState<MessageAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredAccounts = mentionQuery !== null
     ? accounts.filter((a) =>
@@ -49,7 +67,6 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
   };
 
   const insertMention = (account: Account) => {
-    // Replace the @query with @displayName
     const beforeAt = value.slice(0, value.lastIndexOf('@'));
     setValue(beforeAt + `@${account.displayName} `);
     setMentionQuery(null);
@@ -60,11 +77,9 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
     const val = e.target.value;
     setValue(val);
 
-    // Detect @mention in progress
     const lastAt = val.lastIndexOf('@');
     if (lastAt >= 0) {
       const afterAt = val.slice(lastAt + 1);
-      // Only show autocomplete if there's no space after the @
       if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
         setMentionQuery(afterAt);
         setMentionIndex(0);
@@ -76,10 +91,55 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    if ((!trimmed && pendingFiles.length === 0) || disabled || uploading) return;
+    onSend(trimmed || '📎 Attachment', pendingFiles.length > 0 ? pendingFiles : undefined);
     setValue('');
+    setPendingFiles([]);
     setMentionQuery(null);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const uploaded: MessageAttachment[] = [];
+
+    for (const file of Array.from(files)) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Upload via fetch (multipart) — api helper doesn't handle FormData
+        const apiKey = localStorage.getItem('lr_api_key');
+        const headers: Record<string, string> = {};
+        if (apiKey) headers['x-api-key'] = apiKey;
+
+        const apiUrl = import.meta.env.VITE_API_URL ?? '';
+        const res = await fetch(`${apiUrl}/v1/files/upload`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+
+        if (res.ok) {
+          const result: MessageAttachment = await res.json();
+          uploaded.push(result);
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+      }
+    }
+
+    setPendingFiles((prev) => [...prev, ...uploaded]);
+    setUploading(false);
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    inputRef.current?.focus();
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Auto-resize textarea
@@ -91,8 +151,56 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
     }
   }, [value]);
 
+  // Drag and drop
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      const input = fileInputRef.current;
+      if (input) {
+        // Create a new DataTransfer and set files
+        const dt = new DataTransfer();
+        for (const file of Array.from(e.dataTransfer.files)) {
+          dt.items.add(file);
+        }
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  };
+
   return (
-    <div className="relative border-t border-white/5 bg-ocean-light p-3">
+    <div
+      className={`relative border-t border-white/5 bg-ocean-light p-3 ${dragOver ? 'ring-2 ring-lobster/40' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={handleDrop}
+    >
+      {/* Pending file previews */}
+      {pendingFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {pendingFiles.map((file, i) => (
+            <div key={i} className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2 py-1">
+              <span className="text-sm">{fileIcon(file.mimeType)}</span>
+              <span className="text-xs text-white/70 truncate max-w-32">{file.filename}</span>
+              <span className="text-[10px] text-white/30">{formatSize(file.size)}</span>
+              <button
+                onClick={() => removePendingFile(i)}
+                className="text-white/30 hover:text-red-400 text-xs ml-1"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {uploading && (
+        <div className="text-xs text-white/40 mb-2">Uploading...</div>
+      )}
+
       {/* Mention autocomplete popup */}
       {mentionQuery !== null && filteredAccounts.length > 0 && (
         <div className="absolute bottom-full left-3 right-3 mb-1 rounded-lg bg-ocean border border-white/10 shadow-xl overflow-hidden">
@@ -118,19 +226,36 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
       )}
 
       <div className="flex items-end gap-2">
+        {/* File attach button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="rounded-lg p-2 text-white/30 hover:text-white/60 hover:bg-white/5 transition disabled:opacity-50"
+          title="Attach file"
+        >
+          📎
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+
         <textarea
           ref={inputRef}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message... Use @ to mention"
+          placeholder={dragOver ? 'Drop files here...' : 'Type a message... Use @ to mention'}
           disabled={disabled}
           rows={1}
           className="flex-1 resize-none rounded-lg bg-ocean border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-lobster focus:outline-none focus:ring-1 focus:ring-lobster transition disabled:opacity-50"
         />
         <button
           onClick={handleSend}
-          disabled={disabled || !value.trim()}
+          disabled={disabled || uploading || (!value.trim() && pendingFiles.length === 0)}
           className="rounded-lg bg-lobster px-4 py-2 text-sm font-semibold text-white transition hover:bg-lobster-light disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Send

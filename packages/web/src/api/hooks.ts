@@ -74,7 +74,7 @@ export function useMessages(channelId: string, cursor?: string) {
 export function useSendMessage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { channelId: string; content: string }) =>
+    mutationFn: (data: { channelId: string; content: string; attachments?: { url: string; filename: string; size: number; mimeType: string }[] }) =>
       api.post<{ message: Message; mentionEvents: MentionEvent[] }>('/v1/messages', data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['messages', vars.channelId] });
