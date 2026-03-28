@@ -260,10 +260,18 @@ export class AccountService {
       }
     }
 
-    // Return RosterEntry[] — top-level accounts with nested children
+    // Recursively build nested children
+    function buildChildren(id: string): any[] {
+      return (childrenMap.get(id) ?? []).map((child) => ({
+        ...child,
+        children: buildChildren(child.id),
+      }));
+    }
+
+    // Return RosterEntry[] — top-level accounts with recursively nested children
     return topLevel.map((account) => ({
       ...account,
-      children: childrenMap.get(account.id) ?? [],
+      children: buildChildren(account.id),
     }));
   }
 }

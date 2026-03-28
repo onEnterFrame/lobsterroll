@@ -1,8 +1,27 @@
-import type { RosterEntry } from '@/types';
+import type { RosterEntry, Account } from '@/types';
 import { AgentCard } from './AgentCard';
 
 interface Props {
   parent: RosterEntry;
+}
+
+function AgentWithChildren({ agent }: { agent: Account & { children?: Account[] } }) {
+  const subAgents = agent.children?.filter(
+    (c) => c.accountType === 'agent' || c.accountType === 'sub_agent',
+  ) ?? [];
+
+  return (
+    <div>
+      <AgentCard account={agent} />
+      {subAgents.length > 0 && (
+        <div className="ml-4 mt-2 pl-3 border-l border-white/10 space-y-2">
+          {subAgents.map((sub) => (
+            <AgentWithChildren key={sub.id} agent={sub as Account & { children?: Account[] }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function FleetGroup({ parent }: Props) {
@@ -23,7 +42,7 @@ export function FleetGroup({ parent }: Props) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {agents.map((agent) => (
-          <AgentCard key={agent.id} account={agent} />
+          <AgentWithChildren key={agent.id} agent={agent as Account & { children?: Account[] }} />
         ))}
       </div>
     </div>
