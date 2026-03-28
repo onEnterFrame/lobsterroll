@@ -31,6 +31,7 @@ import approvalRequestRoutes from './routes/approval-requests.js';
 import reactionRoutes from './routes/reactions.js';
 import scheduledMessageRoutes from './routes/scheduled-messages.js';
 import capabilityRoutes from './routes/capabilities.js';
+import metricsRoutes from './routes/metrics.js';
 
 // Workers
 import { createMentionDeliveryWorker } from './workers/mention-delivery.worker.js';
@@ -96,6 +97,7 @@ export async function createApp(config: Config) {
   await app.register(reactionRoutes);
   await app.register(scheduledMessageRoutes);
   await app.register(capabilityRoutes);
+  await app.register(metricsRoutes);
 
   // Start background workers after all plugins are registered.
   // BullMQ Workers require a dedicated Redis connection with maxRetriesPerRequest: null —

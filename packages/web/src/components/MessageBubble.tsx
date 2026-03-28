@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Message, Account, ReactionSummary } from '@/types';
 import { useAccountPresence } from '@/hooks/usePresence';
-import { PresenceDot } from './PresenceDot';
+import { Avatar } from './Avatar';
 import { ReactionBar } from './ReactionBar';
 import { AttachmentRenderer } from './AttachmentRenderer';
 import { api } from '@/api/client';
@@ -12,6 +12,8 @@ interface Props {
   isOwn: boolean;
   accounts: Map<string, Account>;
   onReactionsUpdate: () => void;
+  onOpenThread?: (message: Message) => void;
+  threadReplyCount?: number;
 }
 
 function formatTime(iso: string) {
@@ -22,8 +24,7 @@ function highlightMentions(content: string) {
   return content.replace(/@([\w.-]+)/g, '<span class="text-lobster-light font-semibold">@$1</span>');
 }
 
-export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpdate }: Props) {
-  const initials = (sender?.displayName ?? '?').slice(0, 2).toUpperCase();
+export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpdate, onOpenThread, threadReplyCount }: Props) {
   const isAgent = sender?.accountType === 'agent' || sender?.accountType === 'sub_agent';
   const presence = useAccountPresence(message.senderId);
   const presenceStatus = presence?.status ?? sender?.presenceStatus ?? 'offline';
@@ -41,18 +42,13 @@ export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpd
   return (
     <div className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
       {/* Avatar with presence indicator */}
-      <div className="relative flex-shrink-0">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-            isAgent ? 'bg-status-info/20 text-status-info' : 'bg-lobster/20 text-lobster-light'
-          }`}
-        >
-          {isAgent ? '🤖' : initials}
-        </div>
-        <span className="absolute -bottom-0.5 -right-0.5">
-          <PresenceDot status={presenceStatus} />
-        </span>
-      </div>
+      <Avatar
+        displayName={sender?.displayName ?? '?'}
+        avatarUrl={sender?.avatarUrl}
+        accountType={sender?.accountType}
+        presenceStatus={presenceStatus}
+        size="sm"
+      />
 
       {/* Bubble */}
       <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
@@ -77,6 +73,15 @@ export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpd
         />
         {/* Attachments */}
         <AttachmentRenderer attachments={message.attachments} />
+        {/* Thread */}
+        {onOpenThread && !message.threadId && (
+          <button
+            onClick={() => onOpenThread(message)}
+            className="flex items-center gap-1 mt-1 text-[10px] text-white/30 hover:text-lobster-light transition"
+          >
+            🧵 {threadReplyCount ? `${threadReplyCount} replies` : 'Reply in thread'}
+          </button>
+        )}
         {/* Reactions */}
         <ReactionBar
           messageId={message.id}

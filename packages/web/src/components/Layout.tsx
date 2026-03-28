@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { useChannels } from '@/api/hooks';
 import { usePresenceHeartbeat } from '@/hooks/usePresence';
+import { useNotificationPermission } from '@/hooks/useNotifications';
 
 const navItems = [
   { to: '/channels', label: 'Channels', icon: '#' },
@@ -47,6 +48,8 @@ export function Layout() {
 
   // Start presence heartbeat + idle detection for authenticated users
   usePresenceHeartbeat();
+  // Request notification permission
+  useNotificationPermission();
 
   return (
     <div className="flex h-screen bg-ocean">

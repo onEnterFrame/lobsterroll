@@ -7,7 +7,9 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { DocPanel } from '@/components/DocPanel';
+import { ThreadPanel } from '@/components/ThreadPanel';
 import { handlePresenceEvent } from '@/hooks/usePresence';
+import { handleNotificationEvent } from '@/hooks/useNotifications';
 import { api } from '@/api/client';
 import type { Message, MessageTask, ChannelDoc, Approval, ReactionSummary, Account, WsEvent } from '@/types';
 
@@ -16,6 +18,7 @@ export function Channel() {
   const { currentAccount } = useAuth();
   const qc = useQueryClient();
   const [showDocs, setShowDocs] = useState(false);
+  const [threadMessage, setThreadMessage] = useState<Message | null>(null);
 
   const { data: channels } = useChannels();
   const channel = channels?.find((c) => c.id === channelId);
@@ -100,6 +103,11 @@ export function Channel() {
   const handleWsEvent = useCallback(
     (event: WsEvent) => {
       handlePresenceEvent(event);
+
+      // Push notifications when tab is backgrounded
+      const nameMap = new Map<string, string>();
+      accountsMap.forEach((acc, id) => nameMap.set(id, acc.displayName));
+      handleNotificationEvent(event, currentAccount?.id ?? '', nameMap);
 
       if (event.type === 'message.new' && event.data.channelId === channelId) {
         qc.setQueryData<{ messages: Message[]; nextCursor: string | null }>(
@@ -218,6 +226,7 @@ export function Channel() {
           onTaskUpdate={handleTaskUpdate}
           onApprovalUpdate={() => qc.invalidateQueries({ queryKey: ['approvals'] })}
           onReactionsUpdate={handleReactionsUpdate}
+          onOpenThread={(msg) => setThreadMessage(msg)}
         />
 
         {/* Input */}
@@ -228,8 +237,18 @@ export function Channel() {
         />
       </div>
 
+      {/* Thread panel */}
+      {threadMessage && (
+        <ThreadPanel
+          parentMessage={threadMessage}
+          accounts={accountsMap}
+          onClose={() => setThreadMessage(null)}
+          onReactionsUpdate={handleReactionsUpdate}
+        />
+      )}
+
       {/* Doc panel (collapsible sidebar) */}
-      {showDocs && (
+      {showDocs && !threadMessage && (
         <div className="w-80 border-l border-white/5 bg-ocean-light flex-shrink-0">
           <DocPanel
             docs={channelDocs ?? []}

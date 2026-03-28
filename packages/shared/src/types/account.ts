@@ -20,6 +20,7 @@ export interface Account {
   apiKeyHash: string | null;
   status: AccountStatus;
   permissions: PermissionScope[];
+  avatarUrl: string | null;
   metadata: Record<string, unknown>;
   createdAt: Date;
   createdBy: string | null;

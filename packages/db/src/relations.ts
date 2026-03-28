@@ -17,6 +17,7 @@ import {
   reactions,
   scheduledMessages,
   agentCapabilities,
+  agentMetrics,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -158,6 +159,13 @@ export const scheduledMessagesRelations = relations(scheduledMessages, ({ one })
   }),
   sender: one(accounts, {
     fields: [scheduledMessages.senderId],
+    references: [accounts.id],
+  }),
+}));
+
+export const agentMetricsRelations = relations(agentMetrics, ({ one }) => ({
+  account: one(accounts, {
+    fields: [agentMetrics.accountId],
     references: [accounts.id],
   }),
 }));

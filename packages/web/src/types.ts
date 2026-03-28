@@ -34,6 +34,7 @@ export interface Account {
   authMethod: AuthMethod;
   status: AccountStatus;
   permissions: string[];
+  avatarUrl: string | null;
   metadata: Record<string, unknown>;
   presenceStatus: PresenceStatus;
   statusMessage: string | null;

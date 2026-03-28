@@ -14,9 +14,10 @@ interface Props {
   onTaskUpdate: (updated: MessageTask) => void;
   onApprovalUpdate: () => void;
   onReactionsUpdate: () => void;
+  onOpenThread?: (message: Message) => void;
 }
 
-export function MessageList({ messages, accounts, tasksMap, approvalsMap, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate, onReactionsUpdate }: Props) {
+export function MessageList({ messages, accounts, tasksMap, approvalsMap, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate, onReactionsUpdate, onOpenThread }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -84,6 +85,7 @@ export function MessageList({ messages, accounts, tasksMap, approvalsMap, curren
             isOwn={msg.senderId === currentAccountId}
             accounts={accounts}
             onReactionsUpdate={onReactionsUpdate}
+            onOpenThread={onOpenThread}
           />
         );
       })}

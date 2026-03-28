@@ -87,6 +87,7 @@ export const accounts = pgTable(
     status: accountStatusEnum('status').notNull().default('active'),
     permissions: jsonb('permissions').notNull().default([]),
     metadata: jsonb('metadata').notNull().default({}),
+    avatarUrl: text('avatar_url'),
     presenceStatus: presenceStatusEnum('presence_status').notNull().default('offline'),
     statusMessage: text('status_message'),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
@@ -333,6 +334,22 @@ export const scheduledMessages = pgTable(
   (table) => [
     index('scheduled_messages_enabled_scheduled_at_idx').on(table.enabled, table.scheduledAt),
   ],
+);
+
+export const agentMetrics = pgTable(
+  'agent_metrics',
+  {
+    accountId: uuid('account_id')
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    messageCount: jsonb('message_count').notNull().default(0),
+    mentionResponseAvgMs: jsonb('mention_response_avg_ms'),
+    lastActiveChannelId: uuid('last_active_channel_id'),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+    tasksCompleted: jsonb('tasks_completed').notNull().default(0),
+    tasksAssigned: jsonb('tasks_assigned').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
 );
 
 export const agentCapabilities = pgTable(

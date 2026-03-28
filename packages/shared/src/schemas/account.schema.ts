@@ -24,6 +24,7 @@ export const batchCreateAccountsSchema = z.object({
 
 export const updateAccountSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
+  avatarUrl: z.string().url().max(500).nullish(),
   status: z.enum(ACCOUNT_STATUSES).optional(),
   permissions: z.array(z.enum(PERMISSION_SCOPES)).optional(),
   metadata: z.record(z.unknown()).optional(),
