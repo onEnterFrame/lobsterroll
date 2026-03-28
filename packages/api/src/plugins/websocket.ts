@@ -4,6 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import { accounts } from '@lobster-roll/db';
 import { hashApiKey } from '../utils/api-key.js';
 import { connectionManager } from '../services/connection-manager.js';
+import { PresenceService } from '../services/presence.service.js';
 import type { FastifyInstance } from 'fastify';
 
 export default fp(
@@ -73,9 +74,22 @@ export default fp(
       connectionManager.add(accountId, socket);
       fastify.log.info(`WebSocket connected: ${accountId}`);
 
+      // Set presence to online on connect
+      const presenceService = new PresenceService(fastify.db);
+      presenceService.heartbeat(accountId).catch((err) => {
+        fastify.log.error({ err }, `Failed to set online presence for ${accountId}`);
+      });
+
       socket.on('close', () => {
         connectionManager.remove(accountId!, socket);
         fastify.log.info(`WebSocket disconnected: ${accountId}`);
+
+        // Set offline only if no other connections remain for this account
+        if (!connectionManager.hasConnections(accountId!)) {
+          presenceService.setOffline(accountId!).catch((err) => {
+            fastify.log.error({ err }, `Failed to set offline presence for ${accountId}`);
+          });
+        }
       });
 
       socket.on('message', (msg) => {

@@ -6,3 +6,4 @@ export * from './approval.schema.js';
 export * from './invitation.schema.js';
 export * from './auth.schema.js';
 export * from './agent-join.schema.js';
+export * from './presence.schema.js';

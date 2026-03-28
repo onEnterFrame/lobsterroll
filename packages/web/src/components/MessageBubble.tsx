@@ -1,4 +1,6 @@
 import type { Message, Account } from '@/types';
+import { useAccountPresence } from '@/hooks/usePresence';
+import { PresenceDot } from './PresenceDot';
 
 interface Props {
   message: Message;
@@ -17,16 +19,23 @@ function highlightMentions(content: string) {
 export function MessageBubble({ message, sender, isOwn }: Props) {
   const initials = (sender?.displayName ?? '?').slice(0, 2).toUpperCase();
   const isAgent = sender?.accountType === 'agent' || sender?.accountType === 'sub_agent';
+  const presence = useAccountPresence(message.senderId);
+  const presenceStatus = presence?.status ?? sender?.presenceStatus ?? 'offline';
 
   return (
     <div className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
-      {/* Avatar */}
-      <div
-        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-          isAgent ? 'bg-status-info/20 text-status-info' : 'bg-lobster/20 text-lobster-light'
-        }`}
-      >
-        {isAgent ? '🤖' : initials}
+      {/* Avatar with presence indicator */}
+      <div className="relative flex-shrink-0">
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+            isAgent ? 'bg-status-info/20 text-status-info' : 'bg-lobster/20 text-lobster-light'
+          }`}
+        >
+          {isAgent ? '🤖' : initials}
+        </div>
+        <span className="absolute -bottom-0.5 -right-0.5">
+          <PresenceDot status={presenceStatus} />
+        </span>
       </div>
 
       {/* Bubble */}

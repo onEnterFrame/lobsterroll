@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
+import { handlePresenceEvent } from '@/hooks/usePresence';
 import type { Message, Account, WsEvent } from '@/types';
 
 export function Channel() {
@@ -44,6 +45,9 @@ export function Channel() {
   // WebSocket handler for real-time messages
   const handleWsEvent = useCallback(
     (event: WsEvent) => {
+      // Handle presence updates
+      handlePresenceEvent(event);
+
       if (event.type === 'message.new' && event.data.channelId === channelId) {
         qc.setQueryData<{ messages: Message[]; nextCursor: string | null }>(
           ['messages', channelId, undefined],

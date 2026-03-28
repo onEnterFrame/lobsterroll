@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { useChannels } from '@/api/hooks';
+import { usePresenceHeartbeat } from '@/hooks/usePresence';
 
 const navItems = [
   { to: '/channels', label: 'Channels', icon: '#' },
@@ -43,6 +44,9 @@ function SidebarChannelList() {
 
 export function Layout() {
   const { currentAccount, logout } = useAuth();
+
+  // Start presence heartbeat + idle detection for authenticated users
+  usePresenceHeartbeat();
 
   return (
     <div className="flex h-screen bg-ocean">

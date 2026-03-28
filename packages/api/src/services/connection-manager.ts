@@ -45,6 +45,11 @@ export class ConnectionManager {
     }
   }
 
+  hasConnections(accountId: string): boolean {
+    const sockets = this.connections.get(accountId);
+    return !!sockets && sockets.size > 0;
+  }
+
   getConnectedCount(): number {
     return this.connections.size;
   }

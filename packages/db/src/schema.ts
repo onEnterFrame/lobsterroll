@@ -40,6 +40,8 @@ export const callbackMethodEnum = pgEnum('callback_method', ['webhook', 'websock
 
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'denied']);
 
+export const presenceStatusEnum = pgEnum('presence_status', ['online', 'idle', 'offline', 'dnd']);
+
 export const invitationStatusEnum = pgEnum('invitation_status', [
   'pending',
   'accepted',
@@ -84,6 +86,9 @@ export const accounts = pgTable(
     status: accountStatusEnum('status').notNull().default('active'),
     permissions: jsonb('permissions').notNull().default([]),
     metadata: jsonb('metadata').notNull().default({}),
+    presenceStatus: presenceStatusEnum('presence_status').notNull().default('offline'),
+    statusMessage: text('status_message'),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid('created_by'),
   },
@@ -226,6 +231,22 @@ export const invitations = pgTable(
     uniqueIndex('invitations_token_idx').on(table.token),
     index('invitations_email_idx').on(table.email),
     index('invitations_workspace_id_idx').on(table.workspaceId),
+  ],
+);
+
+export const presenceLog = pgTable(
+  'presence_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    status: presenceStatusEnum('status').notNull(),
+    statusMessage: text('status_message'),
+    changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('presence_log_account_id_changed_at_idx').on(table.accountId, table.changedAt),
   ],
 );
 

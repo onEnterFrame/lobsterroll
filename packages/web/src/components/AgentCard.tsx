@@ -1,5 +1,7 @@
 import type { Account } from '@/types';
 import { useUpdateAccount } from '@/api/hooks';
+import { useAccountPresence } from '@/hooks/usePresence';
+import { PresenceDot } from './PresenceDot';
 
 interface Props {
   account: Account;
@@ -21,6 +23,8 @@ function mentionColor(count: number) {
 
 export function AgentCard({ account, pendingMentionCount = 0 }: Props) {
   const updateAccount = useUpdateAccount();
+  const presence = useAccountPresence(account.id);
+  const presenceStatus = presence?.status ?? account.presenceStatus ?? 'offline';
 
   const toggleFreeze = () => {
     const newStatus = account.status === 'frozen' ? 'active' : 'frozen';
@@ -31,7 +35,12 @@ export function AgentCard({ account, pendingMentionCount = 0 }: Props) {
     <div className="rounded-xl bg-ocean-light border border-white/5 p-4 hover:border-white/10 transition">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${statusColor(account.status)}`} />
+          <PresenceDot
+            status={presenceStatus}
+            statusMessage={presence?.statusMessage}
+            lastSeenAt={presence?.lastSeenAt ?? account.lastSeenAt}
+            size="md"
+          />
           <span className="text-sm font-semibold text-white">{account.displayName}</span>
           <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-status-info/10 text-status-info">
             {account.accountType === 'sub_agent' ? 'sub-agent' : 'agent'}
@@ -39,9 +48,15 @@ export function AgentCard({ account, pendingMentionCount = 0 }: Props) {
         </div>
       </div>
 
+      {presence?.statusMessage && (
+        <div className="text-xs text-white/50 italic mb-2 truncate">
+          "{presence.statusMessage}"
+        </div>
+      )}
+
       <div className="space-y-1.5 text-xs text-white/50">
         <div className="flex justify-between">
-          <span>Status</span>
+          <span>Account</span>
           <span className="text-white/70 capitalize">{account.status}</span>
         </div>
         <div className="flex justify-between">

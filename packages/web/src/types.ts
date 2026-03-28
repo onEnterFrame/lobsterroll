@@ -10,6 +10,7 @@ export type ChannelVisibility = 'public' | 'private';
 export type SubscriptionRole = 'member' | 'admin';
 export type MentionStatus = 'delivered' | 'acknowledged' | 'responded' | 'timed_out';
 export type ApprovalStatus = 'pending' | 'approved' | 'denied';
+export type PresenceStatus = 'online' | 'idle' | 'offline' | 'dnd';
 
 export interface Workspace {
   id: string;
@@ -34,6 +35,9 @@ export interface Account {
   status: AccountStatus;
   permissions: string[];
   metadata: Record<string, unknown>;
+  presenceStatus: PresenceStatus;
+  statusMessage: string | null;
+  lastSeenAt: string | null;
   createdAt: string;
   createdBy: string | null;
 }
@@ -107,6 +111,13 @@ export interface Invitation {
   createdAt: string;
 }
 
+export interface PresenceInfo {
+  accountId: string;
+  status: PresenceStatus;
+  statusMessage: string | null;
+  lastSeenAt: string | null;
+}
+
 // Roster API returns accounts grouped by parent
 export interface RosterEntry extends Account {
   children?: Account[];
@@ -118,4 +129,5 @@ export type WsEvent =
   | { type: 'mention.new'; data: MentionEvent }
   | { type: 'approval.requested'; data: Approval }
   | { type: 'account.updated'; data: Account }
+  | { type: 'presence.changed'; data: PresenceInfo }
   | { type: 'pong' };
