@@ -1,20 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
-import type { Message, Account } from '@/types';
+import { TaskCard } from './TaskCard';
+import type { Message, MessageTask, Account } from '@/types';
 
 interface Props {
   messages: Message[];
   accounts: Map<string, Account>;
+  tasksMap: Map<string, MessageTask>;
   currentAccountId: string;
   isLoading: boolean;
+  onTaskUpdate: (updated: MessageTask) => void;
 }
 
-export function MessageList({ messages, accounts, currentAccountId, isLoading }: Props) {
+export function MessageList({ messages, accounts, tasksMap, currentAccountId, isLoading, onTaskUpdate }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
   useEffect(() => {
-    // Auto-scroll when new messages arrive
     if (messages.length > prevCountRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -42,14 +44,28 @@ export function MessageList({ messages, accounts, currentAccountId, isLoading }:
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-      {messages.map((msg) => (
-        <MessageBubble
-          key={msg.id}
-          message={msg}
-          sender={accounts.get(msg.senderId)}
-          isOwn={msg.senderId === currentAccountId}
-        />
-      ))}
+      {messages.map((msg) => {
+        const task = tasksMap.get(msg.id);
+        if (task) {
+          return (
+            <TaskCard
+              key={msg.id}
+              task={task}
+              assigner={accounts.get(task.assignerId)}
+              assignee={accounts.get(task.assigneeId)}
+              onUpdate={onTaskUpdate}
+            />
+          );
+        }
+        return (
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            sender={accounts.get(msg.senderId)}
+            isOwn={msg.senderId === currentAccountId}
+          />
+        );
+      })}
       <div ref={bottomRef} />
     </div>
   );

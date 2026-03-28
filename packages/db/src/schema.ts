@@ -234,6 +234,39 @@ export const invitations = pgTable(
   ],
 );
 
+export const taskStatusEnum = pgEnum('task_status', ['pending', 'accepted', 'completed', 'rejected']);
+
+export const messageTasks = pgTable(
+  'message_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    messageId: uuid('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    assignerId: uuid('assigner_id')
+      .notNull()
+      .references(() => accounts.id),
+    assigneeId: uuid('assignee_id')
+      .notNull()
+      .references(() => accounts.id),
+    title: text('title').notNull(),
+    status: taskStatusEnum('status').notNull().default('pending'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('message_tasks_assignee_id_status_idx').on(table.assigneeId, table.status),
+    index('message_tasks_channel_id_idx').on(table.channelId),
+    index('message_tasks_message_id_idx').on(table.messageId),
+  ],
+);
+
 export const presenceLog = pgTable(
   'presence_log',
   {

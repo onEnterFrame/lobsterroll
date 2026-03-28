@@ -11,6 +11,7 @@ import {
   auditLog,
   invitations,
   presenceLog,
+  messageTasks,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -40,6 +41,8 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
     references: [agentCallbacks.accountId],
   }),
   presenceLogs: many(presenceLog),
+  assignedTasks: many(messageTasks, { relationName: 'assignee' }),
+  createdTasks: many(messageTasks, { relationName: 'assigner' }),
 }));
 
 export const channelsRelations = relations(channels, ({ one, many }) => ({
@@ -107,6 +110,27 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
   workspace: one(workspaces, {
     fields: [auditLog.workspaceId],
     references: [workspaces.id],
+  }),
+}));
+
+export const messageTasksRelations = relations(messageTasks, ({ one }) => ({
+  message: one(messages, {
+    fields: [messageTasks.messageId],
+    references: [messages.id],
+  }),
+  channel: one(channels, {
+    fields: [messageTasks.channelId],
+    references: [channels.id],
+  }),
+  assigner: one(accounts, {
+    fields: [messageTasks.assignerId],
+    references: [accounts.id],
+    relationName: 'assigner',
+  }),
+  assignee: one(accounts, {
+    fields: [messageTasks.assigneeId],
+    references: [accounts.id],
+    relationName: 'assignee',
   }),
 }));
 

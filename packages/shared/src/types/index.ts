@@ -8,3 +8,4 @@ export * from './agent-callback.js';
 export * from './permissions.js';
 export * from './invitation.js';
 export * from './presence.js';
+export * from './task.js';

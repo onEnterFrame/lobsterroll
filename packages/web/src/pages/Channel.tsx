@@ -1,13 +1,14 @@
 import { useMemo, useCallback } from 'react';
 import { useParams } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMessages, useSendMessage, useRoster, useChannels } from '@/api/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { handlePresenceEvent } from '@/hooks/usePresence';
-import type { Message, Account, WsEvent } from '@/types';
+import { api } from '@/api/client';
+import type { Message, MessageTask, Account, WsEvent } from '@/types';
 
 export function Channel() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -20,15 +21,36 @@ export function Channel() {
   const { data: roster } = useRoster();
   const sendMessage = useSendMessage();
 
-  // Build account lookup map from roster
+  // Fetch tasks for this channel
+  const { data: channelTasks } = useQuery<MessageTask[]>({
+    queryKey: ['tasks', channelId],
+    queryFn: () => api.get(`/v1/tasks?channelId=${channelId}`),
+    enabled: !!channelId,
+  });
+
+  // Build task lookup by messageId
+  const tasksMap = useMemo(() => {
+    const map = new Map<string, MessageTask>();
+    if (channelTasks) {
+      for (const task of channelTasks) {
+        map.set(task.messageId, task);
+      }
+    }
+    return map;
+  }, [channelTasks]);
+
+  // Build account lookup map from roster (recursive)
   const accountsMap = useMemo(() => {
     const map = new Map<string, Account>();
+    function addRecursive(account: Account & { children?: Account[] }) {
+      map.set(account.id, account);
+      for (const child of account.children ?? []) {
+        addRecursive(child as Account & { children?: Account[] });
+      }
+    }
     if (roster) {
       for (const entry of roster) {
-        map.set(entry.id, entry);
-        for (const child of entry.children ?? []) {
-          map.set(child.id, child);
-        }
+        addRecursive(entry);
       }
     }
     return map;
@@ -42,7 +64,7 @@ export function Channel() {
     return [...msgs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [messagesData]);
 
-  // WebSocket handler for real-time messages
+  // WebSocket handler for real-time messages + tasks
   const handleWsEvent = useCallback(
     (event: WsEvent) => {
       // Handle presence updates
@@ -53,12 +75,11 @@ export function Channel() {
           ['messages', channelId, undefined],
           (old) => {
             if (!old) return { messages: [event.data], nextCursor: null };
-            // Avoid duplicates
             if (old.messages.some((m) => m.id === event.data.id)) return old;
             return { ...old, messages: [...old.messages, event.data] };
           },
         );
-        // If sender is unknown (new agent just created), refresh roster
+        // If sender is unknown, refresh roster
         const senderId = event.data.senderId;
         const currentRoster = qc.getQueryData<typeof roster>(['roster']);
         const knownIds = new Set<string>();
@@ -72,6 +93,13 @@ export function Channel() {
           qc.invalidateQueries({ queryKey: ['roster'] });
         }
       }
+
+      // Handle task events
+      if (event.type === 'task.created' || event.type === 'task.updated' || event.type === 'task.assigned') {
+        if (event.data.channelId === channelId) {
+          qc.invalidateQueries({ queryKey: ['tasks', channelId] });
+        }
+      }
     },
     [channelId, qc],
   );
@@ -81,6 +109,10 @@ export function Channel() {
   const handleSend = (content: string) => {
     if (!channelId) return;
     sendMessage.mutate({ channelId, content });
+  };
+
+  const handleTaskUpdate = (updated: MessageTask) => {
+    qc.invalidateQueries({ queryKey: ['tasks', channelId] });
   };
 
   if (!channelId) {
@@ -108,8 +140,10 @@ export function Channel() {
       <MessageList
         messages={messages}
         accounts={accountsMap}
+        tasksMap={tasksMap}
         currentAccountId={currentAccount?.id ?? ''}
         isLoading={isLoading}
+        onTaskUpdate={handleTaskUpdate}
       />
 
       {/* Input */}

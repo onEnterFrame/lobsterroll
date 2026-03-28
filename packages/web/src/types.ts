@@ -118,6 +118,23 @@ export interface PresenceInfo {
   lastSeenAt: string | null;
 }
 
+export type TaskStatus = 'pending' | 'accepted' | 'completed' | 'rejected';
+
+export interface MessageTask {
+  id: string;
+  messageId: string;
+  channelId: string;
+  assignerId: string;
+  assigneeId: string;
+  title: string;
+  status: TaskStatus;
+  note: string | null;
+  createdAt: string;
+  acceptedAt: string | null;
+  completedAt: string | null;
+  rejectedAt: string | null;
+}
+
 // Roster API returns accounts grouped by parent
 export interface RosterEntry extends Account {
   children?: Account[];
@@ -130,4 +147,7 @@ export type WsEvent =
   | { type: 'approval.requested'; data: Approval }
   | { type: 'account.updated'; data: Account }
   | { type: 'presence.changed'; data: PresenceInfo }
+  | { type: 'task.created'; data: MessageTask }
+  | { type: 'task.updated'; data: MessageTask }
+  | { type: 'task.assigned'; data: MessageTask }
   | { type: 'pong' };
