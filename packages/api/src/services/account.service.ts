@@ -1,5 +1,5 @@
 import { eq, and, count } from 'drizzle-orm';
-import { accounts, agentCallbacks, approvals, mentionEvents } from '@lobster-roll/db';
+import { accounts, agentCallbacks, approvals, mentionEvents, channels, channelSubscriptions } from '@lobster-roll/db';
 import {
   AppError,
   ErrorCodes,
@@ -127,6 +127,22 @@ export class AccountService {
         method: input.callback.method,
         config: input.callback.config,
       });
+    }
+
+    // Auto-subscribe new agents/sub-agents to #general channel
+    if (input.accountType !== 'human') {
+      const generalChannel = await this.db
+        .select({ id: channels.id })
+        .from(channels)
+        .where(and(eq(channels.workspaceId, workspaceId), eq(channels.name, 'general')))
+        .limit(1);
+
+      if (generalChannel[0]) {
+        await this.db
+          .insert(channelSubscriptions)
+          .values({ channelId: generalChannel[0].id, accountId: account.id, role: 'member' })
+          .onConflictDoNothing();
+      }
     }
 
     return { account, apiKey: apiKeyRaw, pending: false };

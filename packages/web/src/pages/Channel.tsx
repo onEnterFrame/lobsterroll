@@ -54,6 +54,19 @@ export function Channel() {
             return { ...old, messages: [...old.messages, event.data] };
           },
         );
+        // If sender is unknown (new agent just created), refresh roster
+        const senderId = event.data.senderId;
+        const currentRoster = qc.getQueryData<typeof roster>(['roster']);
+        const knownIds = new Set<string>();
+        if (currentRoster) {
+          for (const entry of currentRoster) {
+            knownIds.add(entry.id);
+            for (const child of entry.children ?? []) knownIds.add(child.id);
+          }
+        }
+        if (!knownIds.has(senderId)) {
+          qc.invalidateQueries({ queryKey: ['roster'] });
+        }
       }
     },
     [channelId, qc],

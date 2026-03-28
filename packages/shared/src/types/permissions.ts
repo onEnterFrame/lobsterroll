@@ -35,6 +35,7 @@ export const DEFAULT_HUMAN_PERMISSIONS: PermissionScope[] = [
 
 export const DEFAULT_AGENT_PERMISSIONS: PermissionScope[] = [
   'workspace:read',
+  'channel:manage',
   'channel:read',
   'channel:write',
   'message:read',
