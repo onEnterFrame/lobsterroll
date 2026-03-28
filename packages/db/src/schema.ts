@@ -152,6 +152,8 @@ export const messages = pgTable(
     threadId: uuid('thread_id'),
     attachments: jsonb('attachments').notNull().default([]),
     replyTo: uuid('reply_to'),
+    editedAt: timestamp('edited_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -333,6 +335,44 @@ export const scheduledMessages = pgTable(
   },
   (table) => [
     index('scheduled_messages_enabled_scheduled_at_idx').on(table.enabled, table.scheduledAt),
+  ],
+);
+
+export const readReceipts = pgTable(
+  'read_receipts',
+  {
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    lastReadMessageId: uuid('last_read_message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    readAt: timestamp('read_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('read_receipts_channel_account_idx').on(table.channelId, table.accountId),
+    index('read_receipts_channel_id_idx').on(table.channelId),
+  ],
+);
+
+export const savedMessages = pgTable(
+  'saved_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    messageId: uuid('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('saved_messages_account_message_idx').on(table.accountId, table.messageId),
+    index('saved_messages_account_id_idx').on(table.accountId),
   ],
 );
 

@@ -6,6 +6,7 @@ import { useNotificationPermission } from '@/hooks/useNotifications';
 
 const navItems = [
   { to: '/channels', label: 'Channels', icon: '#' },
+  { to: '/search', label: 'Search', icon: '🔍' },
   { to: '/roster', label: 'Roster', icon: '👥' },
   { to: '/approvals', label: 'Approvals', icon: '✅' },
   { to: '/settings', label: 'Settings', icon: '⚙️' },

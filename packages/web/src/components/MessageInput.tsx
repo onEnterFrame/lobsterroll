@@ -1,11 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Account, MessageAttachment } from '@/types';
 import { api } from '@/api/client';
+import { parseSlashCommand, SLASH_COMMANDS } from '@/utils/slash-commands';
+import type { SlashContext } from '@/utils/slash-commands';
 
 interface Props {
   onSend: (content: string, attachments?: MessageAttachment[]) => void;
   disabled?: boolean;
   accounts: Account[];
+  channelId?: string;
+  currentAccountId?: string;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
 }
 
 function formatSize(bytes: number): string {
@@ -22,7 +28,7 @@ function fileIcon(mime: string) {
   return '📎';
 }
 
-export function MessageInput({ onSend, disabled, accounts }: Props) {
+export function MessageInput({ onSend, disabled, accounts, channelId, currentAccountId, onTypingStart, onTypingStop }: Props) {
   const [value, setValue] = useState('');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -73,9 +79,17 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
     inputRef.current?.focus();
   };
 
+  // Typing indicator debounce
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setValue(val);
+
+    // Typing indicator
+    onTypingStart?.();
+    clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => onTypingStop?.(), 3000);
 
     const lastAt = val.lastIndexOf('@');
     if (lastAt >= 0) {
@@ -89,13 +103,47 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
     setMentionQuery(null);
   };
 
-  const handleSend = () => {
+  // Show slash command hints
+  const slashHint = value.startsWith('/') && !value.includes(' ')
+    ? SLASH_COMMANDS.filter((c) => c.name.startsWith(value)).slice(0, 5)
+    : [];
+
+  const handleSend = async () => {
     const trimmed = value.trim();
     if ((!trimmed && pendingFiles.length === 0) || disabled || uploading) return;
+
+    // Check for slash commands
+    if (trimmed.startsWith('/') && channelId && currentAccountId) {
+      const parsed = parseSlashCommand(trimmed);
+      if (parsed) {
+        const accountMap = new Map<string, { id: string; displayName: string }>();
+        accounts.forEach((a) => accountMap.set(a.id, { id: a.id, displayName: a.displayName }));
+        const ctx: SlashContext = { channelId, currentAccountId, accounts: accountMap };
+        try {
+          const result = await parsed.command.handler(parsed.args, ctx);
+          if (result.handled) {
+            setValue('');
+            setMentionQuery(null);
+            onTypingStop?.();
+            return;
+          }
+          if (result.message) {
+            // Show error as message — just send it as regular text for now
+            onSend(`⚠️ ${result.message}`);
+            setValue('');
+            return;
+          }
+        } catch (err) {
+          console.error('Slash command error:', err);
+        }
+      }
+    }
+
     onSend(trimmed || '📎 Attachment', pendingFiles.length > 0 ? pendingFiles : undefined);
     setValue('');
     setPendingFiles([]);
     setMentionQuery(null);
+    onTypingStop?.();
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,8 +249,28 @@ export function MessageInput({ onSend, disabled, accounts }: Props) {
         <div className="text-xs text-white/40 mb-2">Uploading...</div>
       )}
 
+      {/* Slash command autocomplete */}
+      {slashHint.length > 0 && (
+        <div className="absolute bottom-full left-3 right-3 mb-1 rounded-lg bg-ocean border border-white/10 shadow-xl overflow-hidden">
+          {slashHint.map((cmd) => (
+            <button
+              key={cmd.name}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setValue(cmd.name + ' ');
+                inputRef.current?.focus();
+              }}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-left text-white/70 hover:bg-white/5 transition"
+            >
+              <span className="font-mono text-lobster-light">{cmd.name}</span>
+              <span className="text-xs text-white/30">{cmd.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Mention autocomplete popup */}
-      {mentionQuery !== null && filteredAccounts.length > 0 && (
+      {mentionQuery !== null && filteredAccounts.length > 0 && slashHint.length === 0 && (
         <div className="absolute bottom-full left-3 right-3 mb-1 rounded-lg bg-ocean border border-white/10 shadow-xl overflow-hidden">
           {filteredAccounts.map((a, i) => (
             <button

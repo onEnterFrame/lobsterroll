@@ -93,11 +93,23 @@ export default fp(
       });
 
       socket.on('message', (msg) => {
-        // Handle ping/pong for keepalive
         try {
           const data = JSON.parse(msg.toString());
           if (data.type === 'ping') {
             socket.send(JSON.stringify({ type: 'pong' }));
+          }
+          // Typing indicators — broadcast to other clients
+          if (data.type === 'typing.start' && data.channelId) {
+            connectionManager.broadcast('typing.start', {
+              accountId: accountId!,
+              channelId: data.channelId,
+            });
+          }
+          if (data.type === 'typing.stop' && data.channelId) {
+            connectionManager.broadcast('typing.stop', {
+              accountId: accountId!,
+              channelId: data.channelId,
+            });
           }
         } catch {
           // Ignore invalid messages

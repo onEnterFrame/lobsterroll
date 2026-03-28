@@ -62,6 +62,9 @@ export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpd
             </span>
           )}
           <span className="text-[10px] text-white/30">{formatTime(message.createdAt)}</span>
+          {message.editedAt && (
+            <span className="text-[10px] text-white/20 italic">(edited)</span>
+          )}
         </div>
         <div
           className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${

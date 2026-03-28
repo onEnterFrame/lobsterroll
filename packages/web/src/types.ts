@@ -64,6 +64,8 @@ export interface Message {
   threadId: string | null;
   attachments: MessageAttachment[];
   replyTo: string | null;
+  editedAt: string | null;
+  deletedAt: string | null;
   createdAt: string;
 }
 
@@ -175,4 +177,8 @@ export type WsEvent =
   | { type: 'doc.deleted'; data: { id: string; channelId: string } }
   | { type: 'reaction.added'; data: { messageId: string; accountId: string; emoji: string; semanticMeaning: string | null } }
   | { type: 'reaction.removed'; data: { messageId: string; accountId: string; emoji: string } }
+  | { type: 'typing.start'; data: { accountId: string; channelId: string } }
+  | { type: 'typing.stop'; data: { accountId: string; channelId: string } }
+  | { type: 'message.edited'; data: Message }
+  | { type: 'message.deleted'; data: { id: string; channelId: string } }
   | { type: 'pong' };

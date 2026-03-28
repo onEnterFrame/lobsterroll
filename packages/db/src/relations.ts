@@ -18,6 +18,8 @@ import {
   scheduledMessages,
   agentCapabilities,
   agentMetrics,
+  readReceipts,
+  savedMessages,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -161,6 +163,17 @@ export const scheduledMessagesRelations = relations(scheduledMessages, ({ one })
     fields: [scheduledMessages.senderId],
     references: [accounts.id],
   }),
+}));
+
+export const readReceiptsRelations = relations(readReceipts, ({ one }) => ({
+  channel: one(channels, { fields: [readReceipts.channelId], references: [channels.id] }),
+  account: one(accounts, { fields: [readReceipts.accountId], references: [accounts.id] }),
+  lastReadMessage: one(messages, { fields: [readReceipts.lastReadMessageId], references: [messages.id] }),
+}));
+
+export const savedMessagesRelations = relations(savedMessages, ({ one }) => ({
+  account: one(accounts, { fields: [savedMessages.accountId], references: [accounts.id] }),
+  message: one(messages, { fields: [savedMessages.messageId], references: [messages.id] }),
 }));
 
 export const agentMetricsRelations = relations(agentMetrics, ({ one }) => ({

@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMessages, useSendMessage, useRoster, useChannels } from '@/api/hooks';
@@ -8,6 +8,7 @@ import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
 import { DocPanel } from '@/components/DocPanel';
 import { ThreadPanel } from '@/components/ThreadPanel';
+import { TypingIndicator } from '@/components/TypingIndicator';
 import { handlePresenceEvent } from '@/hooks/usePresence';
 import { handleNotificationEvent } from '@/hooks/useNotifications';
 import { api } from '@/api/client';
@@ -19,6 +20,8 @@ export function Channel() {
   const qc = useQueryClient();
   const [showDocs, setShowDocs] = useState(false);
   const [threadMessage, setThreadMessage] = useState<Message | null>(null);
+  const [typingAccounts, setTypingAccounts] = useState<Set<string>>(new Set());
+  const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const { data: channels } = useChannels();
   const channel = channels?.find((c) => c.id === channelId);
@@ -138,6 +141,26 @@ export function Channel() {
         }
       }
 
+      // Typing indicators
+      if (event.type === 'typing.start') {
+        const aid = event.data.accountId;
+        if (event.data.channelId === channelId && aid !== currentAccount?.id) {
+          setTypingAccounts((prev) => new Set(prev).add(aid));
+          // Auto-clear after 4s
+          const existing = typingTimers.current.get(aid);
+          if (existing) clearTimeout(existing);
+          typingTimers.current.set(aid, setTimeout(() => {
+            setTypingAccounts((prev) => { const next = new Set(prev); next.delete(aid); return next; });
+          }, 4000));
+        }
+      }
+      if (event.type === 'typing.stop') {
+        const aid = event.data.accountId;
+        if (event.data.channelId === channelId) {
+          setTypingAccounts((prev) => { const next = new Set(prev); next.delete(aid); return next; });
+        }
+      }
+
       if (event.type === 'reaction.added' || event.type === 'reaction.removed') {
         // Refresh reactions display
         qc.invalidateQueries({ queryKey: ['reactions'] });
@@ -229,11 +252,20 @@ export function Channel() {
           onOpenThread={(msg) => setThreadMessage(msg)}
         />
 
+        {/* Typing indicator */}
+        <TypingIndicator
+          typingAccountIds={[...typingAccounts]}
+          accounts={accountsMap}
+          currentAccountId={currentAccount?.id ?? ''}
+        />
+
         {/* Input */}
         <MessageInput
           onSend={handleSend}
           disabled={sendMessage.isPending}
           accounts={allAccounts}
+          channelId={channelId}
+          currentAccountId={currentAccount?.id}
         />
       </div>
 

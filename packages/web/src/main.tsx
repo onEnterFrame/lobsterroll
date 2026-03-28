@@ -15,6 +15,7 @@ import { Roster } from '@/pages/Roster';
 import { Channels } from '@/pages/Channels';
 import { Approvals } from '@/pages/Approvals';
 import { Settings } from '@/pages/Settings';
+import { Search } from '@/pages/Search';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route index element={<Navigate to="/channels" replace />} />
                 <Route path="/channels" element={<Channels />} />
                 <Route path="/channels/:channelId" element={<Channel />} />
+                <Route path="/search" element={<Search />} />
                 <Route path="/roster" element={<Roster />} />
                 <Route path="/approvals" element={<Approvals />} />
                 <Route path="/settings" element={<Settings />} />
