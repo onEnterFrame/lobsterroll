@@ -9,3 +9,4 @@ export * from './permissions.js';
 export * from './invitation.js';
 export * from './presence.js';
 export * from './task.js';
+export * from './channel-doc.js';

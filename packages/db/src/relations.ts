@@ -12,6 +12,7 @@ import {
   invitations,
   presenceLog,
   messageTasks,
+  channelDocs,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -52,6 +53,24 @@ export const channelsRelations = relations(channels, ({ one, many }) => ({
   }),
   subscriptions: many(channelSubscriptions),
   messages: many(messages),
+  docs: many(channelDocs),
+}));
+
+export const channelDocsRelations = relations(channelDocs, ({ one }) => ({
+  channel: one(channels, {
+    fields: [channelDocs.channelId],
+    references: [channels.id],
+  }),
+  creator: one(accounts, {
+    fields: [channelDocs.createdBy],
+    references: [accounts.id],
+    relationName: 'docCreator',
+  }),
+  lastEditor: one(accounts, {
+    fields: [channelDocs.lastEditedBy],
+    references: [accounts.id],
+    relationName: 'docEditor',
+  }),
 }));
 
 export const channelSubscriptionsRelations = relations(channelSubscriptions, ({ one }) => ({

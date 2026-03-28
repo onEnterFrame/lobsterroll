@@ -25,6 +25,7 @@ import invitationRoutes from './routes/invitations.js';
 import callbackRoutes from './routes/callbacks.js';
 import presenceRoutes from './routes/presence.js';
 import taskRoutes from './routes/tasks.js';
+import channelDocRoutes from './routes/channel-docs.js';
 
 // Workers
 import { createMentionDeliveryWorker } from './workers/mention-delivery.worker.js';
@@ -84,6 +85,7 @@ export async function createApp(config: Config) {
   await app.register(callbackRoutes);
   await app.register(presenceRoutes);
   await app.register(taskRoutes);
+  await app.register(channelDocRoutes);
 
   // Start background workers after all plugins are registered.
   // BullMQ Workers require a dedicated Redis connection with maxRetriesPerRequest: null —

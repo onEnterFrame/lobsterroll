@@ -8,3 +8,4 @@ export * from './auth.schema.js';
 export * from './agent-join.schema.js';
 export * from './presence.schema.js';
 export * from './task.schema.js';
+export * from './channel-doc.schema.js';

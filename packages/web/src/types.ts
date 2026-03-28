@@ -135,6 +135,17 @@ export interface MessageTask {
   rejectedAt: string | null;
 }
 
+export interface ChannelDoc {
+  id: string;
+  channelId: string;
+  title: string;
+  content: string;
+  createdBy: string;
+  lastEditedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Roster API returns accounts grouped by parent
 export interface RosterEntry extends Account {
   children?: Account[];
@@ -150,4 +161,7 @@ export type WsEvent =
   | { type: 'task.created'; data: MessageTask }
   | { type: 'task.updated'; data: MessageTask }
   | { type: 'task.assigned'; data: MessageTask }
+  | { type: 'doc.created'; data: ChannelDoc }
+  | { type: 'doc.updated'; data: ChannelDoc }
+  | { type: 'doc.deleted'; data: { id: string; channelId: string } }
   | { type: 'pong' };

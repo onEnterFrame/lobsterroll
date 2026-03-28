@@ -267,6 +267,29 @@ export const messageTasks = pgTable(
   ],
 );
 
+export const channelDocs = pgTable(
+  'channel_docs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    content: text('content').notNull().default(''),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => accounts.id),
+    lastEditedBy: uuid('last_edited_by')
+      .notNull()
+      .references(() => accounts.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('channel_docs_channel_id_idx').on(table.channelId),
+  ],
+);
+
 export const presenceLog = pgTable(
   'presence_log',
   {

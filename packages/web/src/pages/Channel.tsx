@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMessages, useSendMessage, useRoster, useChannels } from '@/api/hooks';
@@ -6,14 +6,16 @@ import { useAuth } from '@/context/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { MessageList } from '@/components/MessageList';
 import { MessageInput } from '@/components/MessageInput';
+import { DocPanel } from '@/components/DocPanel';
 import { handlePresenceEvent } from '@/hooks/usePresence';
 import { api } from '@/api/client';
-import type { Message, MessageTask, Account, WsEvent } from '@/types';
+import type { Message, MessageTask, ChannelDoc, Account, WsEvent } from '@/types';
 
 export function Channel() {
   const { channelId } = useParams<{ channelId: string }>();
   const { currentAccount } = useAuth();
   const qc = useQueryClient();
+  const [showDocs, setShowDocs] = useState(false);
 
   const { data: channels } = useChannels();
   const channel = channels?.find((c) => c.id === channelId);
@@ -25,6 +27,13 @@ export function Channel() {
   const { data: channelTasks } = useQuery<MessageTask[]>({
     queryKey: ['tasks', channelId],
     queryFn: () => api.get(`/v1/tasks?channelId=${channelId}`),
+    enabled: !!channelId,
+  });
+
+  // Fetch docs for this channel
+  const { data: channelDocs } = useQuery<ChannelDoc[]>({
+    queryKey: ['docs', channelId],
+    queryFn: () => api.get(`/v1/docs?channelId=${channelId}`),
     enabled: !!channelId,
   });
 
@@ -64,10 +73,9 @@ export function Channel() {
     return [...msgs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [messagesData]);
 
-  // WebSocket handler for real-time messages + tasks
+  // WebSocket handler
   const handleWsEvent = useCallback(
     (event: WsEvent) => {
-      // Handle presence updates
       handlePresenceEvent(event);
 
       if (event.type === 'message.new' && event.data.channelId === channelId) {
@@ -79,7 +87,6 @@ export function Channel() {
             return { ...old, messages: [...old.messages, event.data] };
           },
         );
-        // If sender is unknown, refresh roster
         const senderId = event.data.senderId;
         const currentRoster = qc.getQueryData<typeof roster>(['roster']);
         const knownIds = new Set<string>();
@@ -94,10 +101,20 @@ export function Channel() {
         }
       }
 
-      // Handle task events
       if (event.type === 'task.created' || event.type === 'task.updated' || event.type === 'task.assigned') {
         if (event.data.channelId === channelId) {
           qc.invalidateQueries({ queryKey: ['tasks', channelId] });
+        }
+      }
+
+      if (event.type === 'doc.created' || event.type === 'doc.updated') {
+        if (event.data.channelId === channelId) {
+          qc.invalidateQueries({ queryKey: ['docs', channelId] });
+        }
+      }
+      if (event.type === 'doc.deleted') {
+        if (event.data.channelId === channelId) {
+          qc.invalidateQueries({ queryKey: ['docs', channelId] });
         }
       }
     },
@@ -111,8 +128,12 @@ export function Channel() {
     sendMessage.mutate({ channelId, content });
   };
 
-  const handleTaskUpdate = (updated: MessageTask) => {
+  const handleTaskUpdate = () => {
     qc.invalidateQueries({ queryKey: ['tasks', channelId] });
+  };
+
+  const handleDocsUpdate = () => {
+    qc.invalidateQueries({ queryKey: ['docs', channelId] });
   };
 
   if (!channelId) {
@@ -123,35 +144,64 @@ export function Channel() {
     );
   }
 
+  const docCount = channelDocs?.length ?? 0;
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Channel header */}
-      <header className="flex items-center gap-3 border-b border-white/5 px-4 py-3">
-        <span className="text-white/30 text-lg">#</span>
-        <div>
-          <h2 className="font-semibold text-white">{channel?.name ?? 'Channel'}</h2>
-          {channel?.topic && (
-            <p className="text-xs text-white/40">{channel.topic}</p>
-          )}
+    <div className="flex h-full">
+      {/* Main chat area */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Channel header */}
+        <header className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-white/30 text-lg">#</span>
+            <div>
+              <h2 className="font-semibold text-white">{channel?.name ?? 'Channel'}</h2>
+              {channel?.topic && (
+                <p className="text-xs text-white/40">{channel.topic}</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowDocs(!showDocs)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              showDocs
+                ? 'bg-lobster/20 text-lobster-light'
+                : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+            }`}
+          >
+            📄 Docs{docCount > 0 && ` (${docCount})`}
+          </button>
+        </header>
+
+        {/* Messages */}
+        <MessageList
+          messages={messages}
+          accounts={accountsMap}
+          tasksMap={tasksMap}
+          currentAccountId={currentAccount?.id ?? ''}
+          isLoading={isLoading}
+          onTaskUpdate={handleTaskUpdate}
+        />
+
+        {/* Input */}
+        <MessageInput
+          onSend={handleSend}
+          disabled={sendMessage.isPending}
+          accounts={allAccounts}
+        />
+      </div>
+
+      {/* Doc panel (collapsible sidebar) */}
+      {showDocs && (
+        <div className="w-80 border-l border-white/5 bg-ocean-light flex-shrink-0">
+          <DocPanel
+            docs={channelDocs ?? []}
+            channelId={channelId}
+            accounts={accountsMap}
+            onUpdate={handleDocsUpdate}
+          />
         </div>
-      </header>
-
-      {/* Messages */}
-      <MessageList
-        messages={messages}
-        accounts={accountsMap}
-        tasksMap={tasksMap}
-        currentAccountId={currentAccount?.id ?? ''}
-        isLoading={isLoading}
-        onTaskUpdate={handleTaskUpdate}
-      />
-
-      {/* Input */}
-      <MessageInput
-        onSend={handleSend}
-        disabled={sendMessage.isPending}
-        accounts={allAccounts}
-      />
+      )}
     </div>
   );
 }
