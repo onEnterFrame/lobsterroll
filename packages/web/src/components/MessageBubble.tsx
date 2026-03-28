@@ -1,11 +1,16 @@
-import type { Message, Account } from '@/types';
+import { useEffect, useState } from 'react';
+import type { Message, Account, ReactionSummary } from '@/types';
 import { useAccountPresence } from '@/hooks/usePresence';
 import { PresenceDot } from './PresenceDot';
+import { ReactionBar } from './ReactionBar';
+import { api } from '@/api/client';
 
 interface Props {
   message: Message;
   sender?: Account;
   isOwn: boolean;
+  accounts: Map<string, Account>;
+  onReactionsUpdate: () => void;
 }
 
 function formatTime(iso: string) {
@@ -16,11 +21,21 @@ function highlightMentions(content: string) {
   return content.replace(/@([\w.-]+)/g, '<span class="text-lobster-light font-semibold">@$1</span>');
 }
 
-export function MessageBubble({ message, sender, isOwn }: Props) {
+export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpdate }: Props) {
   const initials = (sender?.displayName ?? '?').slice(0, 2).toUpperCase();
   const isAgent = sender?.accountType === 'agent' || sender?.accountType === 'sub_agent';
   const presence = useAccountPresence(message.senderId);
   const presenceStatus = presence?.status ?? sender?.presenceStatus ?? 'offline';
+  const [reactions, setReactions] = useState<ReactionSummary[]>([]);
+
+  useEffect(() => {
+    api.get<ReactionSummary[]>(`/v1/reactions/${message.id}`).then(setReactions).catch(() => {});
+  }, [message.id]);
+
+  const handleReactionUpdate = () => {
+    api.get<ReactionSummary[]>(`/v1/reactions/${message.id}`).then(setReactions).catch(() => {});
+    onReactionsUpdate();
+  };
 
   return (
     <div className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
@@ -58,6 +73,13 @@ export function MessageBubble({ message, sender, isOwn }: Props) {
               : 'bg-ocean-lighter text-white/90 rounded-tl-sm'
           }`}
           dangerouslySetInnerHTML={{ __html: highlightMentions(message.content) }}
+        />
+        {/* Reactions */}
+        <ReactionBar
+          messageId={message.id}
+          reactions={reactions}
+          accounts={accounts}
+          onUpdate={handleReactionUpdate}
         />
       </div>
     </div>

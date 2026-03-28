@@ -292,6 +292,66 @@ export const channelDocs = pgTable(
   ],
 );
 
+export const reactions = pgTable(
+  'reactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    messageId: uuid('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    emoji: text('emoji').notNull(),
+    semanticMeaning: text('semantic_meaning'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('reactions_message_account_emoji_idx').on(table.messageId, table.accountId, table.emoji),
+    index('reactions_message_id_idx').on(table.messageId),
+  ],
+);
+
+export const scheduledMessages = pgTable(
+  'scheduled_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    senderId: uuid('sender_id')
+      .notNull()
+      .references(() => accounts.id),
+    content: text('content').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    cronExpr: text('cron_expr'),
+    timezone: text('timezone').notNull().default('UTC'),
+    enabled: boolean('enabled').notNull().default(true),
+    lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('scheduled_messages_enabled_scheduled_at_idx').on(table.enabled, table.scheduledAt),
+  ],
+);
+
+export const agentCapabilities = pgTable(
+  'agent_capabilities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    tags: jsonb('tags').notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('agent_capabilities_account_id_idx').on(table.accountId),
+  ],
+);
+
 export const channelWebhooks = pgTable(
   'channel_webhooks',
   {

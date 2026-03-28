@@ -14,6 +14,9 @@ import {
   messageTasks,
   channelDocs,
   channelWebhooks,
+  reactions,
+  scheduledMessages,
+  agentCapabilities,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -45,6 +48,8 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
   presenceLogs: many(presenceLog),
   assignedTasks: many(messageTasks, { relationName: 'assignee' }),
   createdTasks: many(messageTasks, { relationName: 'assigner' }),
+  reactions: many(reactions),
+  capabilities: many(agentCapabilities),
 }));
 
 export const channelsRelations = relations(channels, ({ one, many }) => ({
@@ -96,6 +101,7 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
     references: [accounts.id],
   }),
   mentionEvents: many(mentionEvents),
+  reactions: many(reactions),
 }));
 
 export const mentionEventsRelations = relations(mentionEvents, ({ one }) => ({
@@ -131,6 +137,35 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
   workspace: one(workspaces, {
     fields: [auditLog.workspaceId],
     references: [workspaces.id],
+  }),
+}));
+
+export const reactionsRelations = relations(reactions, ({ one }) => ({
+  message: one(messages, {
+    fields: [reactions.messageId],
+    references: [messages.id],
+  }),
+  account: one(accounts, {
+    fields: [reactions.accountId],
+    references: [accounts.id],
+  }),
+}));
+
+export const scheduledMessagesRelations = relations(scheduledMessages, ({ one }) => ({
+  channel: one(channels, {
+    fields: [scheduledMessages.channelId],
+    references: [channels.id],
+  }),
+  sender: one(accounts, {
+    fields: [scheduledMessages.senderId],
+    references: [accounts.id],
+  }),
+}));
+
+export const agentCapabilitiesRelations = relations(agentCapabilities, ({ one }) => ({
+  account: one(accounts, {
+    fields: [agentCapabilities.accountId],
+    references: [accounts.id],
   }),
 }));
 

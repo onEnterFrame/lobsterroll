@@ -11,3 +11,6 @@ export * from './presence.js';
 export * from './task.js';
 export * from './channel-doc.js';
 export * from './webhook.js';
+export * from './reaction.js';
+export * from './scheduled-message.js';
+export * from './capability.js';

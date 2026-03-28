@@ -11,3 +11,6 @@ export * from './task.schema.js';
 export * from './channel-doc.schema.js';
 export * from './webhook.schema.js';
 export * from './approval-request.schema.js';
+export * from './reaction.schema.js';
+export * from './scheduled-message.schema.js';
+export * from './capability.schema.js';

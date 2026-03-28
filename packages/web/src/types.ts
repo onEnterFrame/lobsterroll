@@ -147,6 +147,13 @@ export interface ChannelDoc {
   updatedAt: string;
 }
 
+export interface ReactionSummary {
+  emoji: string;
+  count: number;
+  semanticMeaning: string | null;
+  accountIds: string[];
+}
+
 // Roster API returns accounts grouped by parent
 export interface RosterEntry extends Account {
   children?: Account[];
@@ -165,4 +172,6 @@ export type WsEvent =
   | { type: 'doc.created'; data: ChannelDoc }
   | { type: 'doc.updated'; data: ChannelDoc }
   | { type: 'doc.deleted'; data: { id: string; channelId: string } }
+  | { type: 'reaction.added'; data: { messageId: string; accountId: string; emoji: string; semanticMeaning: string | null } }
+  | { type: 'reaction.removed'; data: { messageId: string; accountId: string; emoji: string } }
   | { type: 'pong' };

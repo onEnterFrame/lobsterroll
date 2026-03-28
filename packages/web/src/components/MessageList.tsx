@@ -13,9 +13,10 @@ interface Props {
   isLoading: boolean;
   onTaskUpdate: (updated: MessageTask) => void;
   onApprovalUpdate: () => void;
+  onReactionsUpdate: () => void;
 }
 
-export function MessageList({ messages, accounts, tasksMap, approvalsMap, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate }: Props) {
+export function MessageList({ messages, accounts, tasksMap, approvalsMap, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate, onReactionsUpdate }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -48,7 +49,6 @@ export function MessageList({ messages, accounts, tasksMap, approvalsMap, curren
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
       {messages.map((msg) => {
-        // Task message
         const task = tasksMap.get(msg.id);
         if (task) {
           return (
@@ -62,7 +62,6 @@ export function MessageList({ messages, accounts, tasksMap, approvalsMap, curren
           );
         }
 
-        // Approval request message
         const approval = approvalsMap.get(msg.id);
         if (approval || (msg.payload as Record<string, unknown>)?.type === 'approval_request') {
           if (approval) {
@@ -77,13 +76,14 @@ export function MessageList({ messages, accounts, tasksMap, approvalsMap, curren
           }
         }
 
-        // Regular message
         return (
           <MessageBubble
             key={msg.id}
             message={msg}
             sender={accounts.get(msg.senderId)}
             isOwn={msg.senderId === currentAccountId}
+            accounts={accounts}
+            onReactionsUpdate={onReactionsUpdate}
           />
         );
       })}

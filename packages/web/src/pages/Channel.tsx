@@ -9,7 +9,7 @@ import { MessageInput } from '@/components/MessageInput';
 import { DocPanel } from '@/components/DocPanel';
 import { handlePresenceEvent } from '@/hooks/usePresence';
 import { api } from '@/api/client';
-import type { Message, MessageTask, ChannelDoc, Approval, Account, WsEvent } from '@/types';
+import type { Message, MessageTask, ChannelDoc, Approval, ReactionSummary, Account, WsEvent } from '@/types';
 
 export function Channel() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -47,6 +47,11 @@ export function Channel() {
     }
     return map;
   }, [pendingApprovals]);
+
+  // Reactions are fetched per-message on demand, but we invalidate on WS events
+  const handleReactionsUpdate = () => {
+    qc.invalidateQueries({ queryKey: ['messages', channelId] });
+  };
 
   // Fetch docs for this channel
   const { data: channelDocs } = useQuery<ChannelDoc[]>({
@@ -123,6 +128,11 @@ export function Channel() {
         if (event.data.channelId === channelId) {
           qc.invalidateQueries({ queryKey: ['tasks', channelId] });
         }
+      }
+
+      if (event.type === 'reaction.added' || event.type === 'reaction.removed') {
+        // Refresh reactions display
+        qc.invalidateQueries({ queryKey: ['reactions'] });
       }
 
       if (event.type === 'doc.created' || event.type === 'doc.updated') {
@@ -207,6 +217,7 @@ export function Channel() {
           isLoading={isLoading}
           onTaskUpdate={handleTaskUpdate}
           onApprovalUpdate={() => qc.invalidateQueries({ queryKey: ['approvals'] })}
+          onReactionsUpdate={handleReactionsUpdate}
         />
 
         {/* Input */}
