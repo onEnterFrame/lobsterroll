@@ -1,5 +1,5 @@
 import { eq, and, desc, lt, ilike } from 'drizzle-orm';
-import { messages, mentionEvents, accounts, agentCallbacks, channels, channelSubscriptions } from '@lobster-roll/db';
+import { messages, mentionEvents, accounts, agentCallbacks, channels } from '@lobster-roll/db';
 import { AppError, ErrorCodes, parseMentions, MENTION_TIMEOUT_MS } from '@lobster-roll/shared';
 import type { CreateMessageInput, ListMessagesInput } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
@@ -106,15 +106,11 @@ export class MessageService {
       );
     }
 
-    // 4. Broadcast message.new to all channel subscribers over WebSocket
+    // 4. Broadcast message.new to all connected clients in the workspace
+    // Broadcast to everyone — frontend filters by channelId client-side.
+    // This ensures users see new messages without needing explicit channel subscriptions.
     if (this.connectionManager) {
-      const subs = await this.db
-        .select({ accountId: channelSubscriptions.accountId })
-        .from(channelSubscriptions)
-        .where(eq(channelSubscriptions.channelId, input.channelId));
-
-      const subscriberIds = subs.map((s) => s.accountId);
-      this.connectionManager.broadcast('message.new', message, subscriberIds);
+      this.connectionManager.broadcast('message.new', message);
     }
 
     return { message, mentionEvents: events };
