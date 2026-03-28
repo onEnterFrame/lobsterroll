@@ -7,6 +7,7 @@ import {
   pgEnum,
   uniqueIndex,
   index,
+  boolean,
 } from 'drizzle-orm/pg-core';
 
 // ── Enums ──────────────────────────────────────────────────────────────
@@ -276,6 +277,7 @@ export const channelDocs = pgTable(
       .references(() => channels.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     content: text('content').notNull().default(''),
+    pinned: boolean('pinned').notNull().default(false),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => accounts.id),
@@ -287,6 +289,27 @@ export const channelDocs = pgTable(
   },
   (table) => [
     index('channel_docs_channel_id_idx').on(table.channelId),
+  ],
+);
+
+export const channelWebhooks = pgTable(
+  'channel_webhooks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    token: text('token').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => accounts.id),
+    enabled: boolean('enabled').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('channel_webhooks_token_idx').on(table.token),
+    index('channel_webhooks_channel_id_idx').on(table.channelId),
   ],
 );
 

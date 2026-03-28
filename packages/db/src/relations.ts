@@ -13,6 +13,7 @@ import {
   presenceLog,
   messageTasks,
   channelDocs,
+  channelWebhooks,
 } from './schema.js';
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
@@ -54,6 +55,7 @@ export const channelsRelations = relations(channels, ({ one, many }) => ({
   subscriptions: many(channelSubscriptions),
   messages: many(messages),
   docs: many(channelDocs),
+  webhooks: many(channelWebhooks),
 }));
 
 export const channelDocsRelations = relations(channelDocs, ({ one }) => ({
@@ -129,6 +131,17 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
   workspace: one(workspaces, {
     fields: [auditLog.workspaceId],
     references: [workspaces.id],
+  }),
+}));
+
+export const channelWebhooksRelations = relations(channelWebhooks, ({ one }) => ({
+  channel: one(channels, {
+    fields: [channelWebhooks.channelId],
+    references: [channels.id],
+  }),
+  creator: one(accounts, {
+    fields: [channelWebhooks.createdBy],
+    references: [accounts.id],
   }),
 }));
 

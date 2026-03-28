@@ -9,6 +9,7 @@ export const createChannelDocSchema = z.object({
 export const updateChannelDocSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   content: z.string().max(50_000).optional(),
+  pinned: z.boolean().optional(),
 });
 
 export type CreateChannelDocInput = z.infer<typeof createChannelDocSchema>;

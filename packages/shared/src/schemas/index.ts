@@ -9,3 +9,5 @@ export * from './agent-join.schema.js';
 export * from './presence.schema.js';
 export * from './task.schema.js';
 export * from './channel-doc.schema.js';
+export * from './webhook.schema.js';
+export * from './approval-request.schema.js';

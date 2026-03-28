@@ -50,20 +50,31 @@ function DocEditor({ doc, onSave, onCancel }: {
   );
 }
 
-function DocView({ doc, accounts, onEdit, onDelete }: {
+function DocView({ doc, accounts, onEdit, onDelete, onTogglePin }: {
   doc: ChannelDoc;
   accounts: Map<string, Account>;
   onEdit: () => void;
   onDelete: () => void;
+  onTogglePin: () => void;
 }) {
   const editor = accounts.get(doc.lastEditedBy);
   const timeAgo = formatTimeAgo(doc.updatedAt);
 
   return (
-    <div className="rounded-xl bg-ocean border border-white/5 p-4 hover:border-white/10 transition">
+    <div className={`rounded-xl bg-ocean border p-4 hover:border-white/10 transition ${doc.pinned ? 'border-lobster/30' : 'border-white/5'}`}>
       <div className="flex items-start justify-between mb-2">
-        <h4 className="text-sm font-semibold text-white">{doc.title}</h4>
+        <div className="flex items-center gap-1.5">
+          {doc.pinned && <span className="text-xs" title="Pinned">📌</span>}
+          <h4 className="text-sm font-semibold text-white">{doc.title}</h4>
+        </div>
         <div className="flex gap-1">
+          <button
+            onClick={onTogglePin}
+            className={`rounded p-1 transition ${doc.pinned ? 'text-lobster-light hover:text-white/70' : 'text-white/30 hover:text-lobster-light'} hover:bg-white/5`}
+            title={doc.pinned ? 'Unpin' : 'Pin'}
+          >
+            📌
+          </button>
           <button
             onClick={onEdit}
             className="rounded p-1 text-white/30 hover:text-white/70 hover:bg-white/5 transition"
@@ -143,6 +154,22 @@ export function DocPanel({ docs, channelId, accounts, onUpdate }: Props) {
     }
   };
 
+  const handleTogglePin = async (docId: string, currentlyPinned: boolean) => {
+    try {
+      await api.patch(`/v1/docs/${docId}`, { pinned: !currentlyPinned });
+      onUpdate();
+    } catch (err) {
+      console.error('Failed to toggle pin:', err);
+    }
+  };
+
+  // Sort: pinned first, then by updatedAt
+  const sortedDocs = [...docs].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
@@ -197,7 +224,7 @@ export function DocPanel({ docs, channelId, accounts, onUpdate }: Props) {
           </div>
         )}
 
-        {docs.map((doc) =>
+        {sortedDocs.map((doc) =>
           editingId === doc.id ? (
             <DocEditor
               key={doc.id}
@@ -212,6 +239,7 @@ export function DocPanel({ docs, channelId, accounts, onUpdate }: Props) {
               accounts={accounts}
               onEdit={() => setEditingId(doc.id)}
               onDelete={() => handleDelete(doc.id)}
+              onTogglePin={() => handleTogglePin(doc.id, doc.pinned)}
             />
           ),
         )}

@@ -1,18 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { TaskCard } from './TaskCard';
-import type { Message, MessageTask, Account } from '@/types';
+import { InlineApprovalCard } from './InlineApprovalCard';
+import type { Message, MessageTask, Approval, Account } from '@/types';
 
 interface Props {
   messages: Message[];
   accounts: Map<string, Account>;
   tasksMap: Map<string, MessageTask>;
+  approvalsMap: Map<string, Approval>;
   currentAccountId: string;
   isLoading: boolean;
   onTaskUpdate: (updated: MessageTask) => void;
+  onApprovalUpdate: () => void;
 }
 
-export function MessageList({ messages, accounts, tasksMap, currentAccountId, isLoading, onTaskUpdate }: Props) {
+export function MessageList({ messages, accounts, tasksMap, approvalsMap, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -45,6 +48,7 @@ export function MessageList({ messages, accounts, tasksMap, currentAccountId, is
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
       {messages.map((msg) => {
+        // Task message
         const task = tasksMap.get(msg.id);
         if (task) {
           return (
@@ -57,6 +61,23 @@ export function MessageList({ messages, accounts, tasksMap, currentAccountId, is
             />
           );
         }
+
+        // Approval request message
+        const approval = approvalsMap.get(msg.id);
+        if (approval || (msg.payload as Record<string, unknown>)?.type === 'approval_request') {
+          if (approval) {
+            return (
+              <InlineApprovalCard
+                key={msg.id}
+                approval={approval}
+                requester={accounts.get(approval.requesterId)}
+                onUpdate={onApprovalUpdate}
+              />
+            );
+          }
+        }
+
+        // Regular message
         return (
           <MessageBubble
             key={msg.id}

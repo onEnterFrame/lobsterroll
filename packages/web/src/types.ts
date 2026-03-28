@@ -140,6 +140,7 @@ export interface ChannelDoc {
   channelId: string;
   title: string;
   content: string;
+  pinned: boolean;
   createdBy: string;
   lastEditedBy: string;
   createdAt: string;

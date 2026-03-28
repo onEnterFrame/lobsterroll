@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMessages, useSendMessage, useRoster, useChannels } from '@/api/hooks';
@@ -9,7 +9,7 @@ import { MessageInput } from '@/components/MessageInput';
 import { DocPanel } from '@/components/DocPanel';
 import { handlePresenceEvent } from '@/hooks/usePresence';
 import { api } from '@/api/client';
-import type { Message, MessageTask, ChannelDoc, Account, WsEvent } from '@/types';
+import type { Message, MessageTask, ChannelDoc, Approval, Account, WsEvent } from '@/types';
 
 export function Channel() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -29,6 +29,24 @@ export function Channel() {
     queryFn: () => api.get(`/v1/tasks?channelId=${channelId}`),
     enabled: !!channelId,
   });
+
+  // Fetch approvals (we need to match them to messages)
+  const { data: pendingApprovals } = useQuery<Approval[]>({
+    queryKey: ['approvals', 'pending'],
+    queryFn: () => api.get('/v1/approvals/pending'),
+  });
+
+  // Build approval lookup by messageId (from actionData)
+  const approvalsMap = useMemo(() => {
+    const map = new Map<string, Approval>();
+    if (pendingApprovals) {
+      for (const approval of pendingApprovals) {
+        const msgId = (approval.actionData as Record<string, unknown>)?.messageId as string | undefined;
+        if (msgId) map.set(msgId, approval);
+      }
+    }
+    return map;
+  }, [pendingApprovals]);
 
   // Fetch docs for this channel
   const { data: channelDocs } = useQuery<ChannelDoc[]>({
@@ -145,6 +163,12 @@ export function Channel() {
   }
 
   const docCount = channelDocs?.length ?? 0;
+  const hasPinnedDocs = channelDocs?.some((d) => d.pinned) ?? false;
+
+  // Auto-show docs panel when channel has pinned docs
+  useEffect(() => {
+    if (hasPinnedDocs) setShowDocs(true);
+  }, [hasPinnedDocs, channelId]);
 
   return (
     <div className="flex h-full">
@@ -178,9 +202,11 @@ export function Channel() {
           messages={messages}
           accounts={accountsMap}
           tasksMap={tasksMap}
+          approvalsMap={approvalsMap}
           currentAccountId={currentAccount?.id ?? ''}
           isLoading={isLoading}
           onTaskUpdate={handleTaskUpdate}
+          onApprovalUpdate={() => qc.invalidateQueries({ queryKey: ['approvals'] })}
         />
 
         {/* Input */}
