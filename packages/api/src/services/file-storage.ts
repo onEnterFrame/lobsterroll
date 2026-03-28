@@ -1,7 +1,4 @@
-import {
-  S3Client,
-  PutObjectCommand,
-} from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
 import type { Config } from '../config.js';
 
@@ -12,23 +9,18 @@ export interface UploadResult {
   mimeType: string;
 }
 
+const BUCKET = 'attachments';
+
 export class FileStorageService {
-  private client: S3Client;
-  private bucket: string;
-  private endpoint: string;
+  private supabaseUrl: string;
+  private supabase: ReturnType<typeof createClient>;
 
   constructor(config: Config) {
-    this.bucket = config.S3_BUCKET;
-    this.endpoint = config.S3_ENDPOINT;
-    this.client = new S3Client({
-      endpoint: config.S3_ENDPOINT,
-      region: config.S3_REGION,
-      credentials: {
-        accessKeyId: config.S3_ACCESS_KEY,
-        secretAccessKey: config.S3_SECRET_KEY,
-      },
-      forcePathStyle: true, // Required for MinIO
-    });
+    if (!config.SUPABASE_URL || !config.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase URL and service role key required for file storage');
+    }
+    this.supabaseUrl = config.SUPABASE_URL;
+    this.supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY);
   }
 
   async upload(
@@ -36,19 +28,28 @@ export class FileStorageService {
     filename: string,
     mimeType: string,
   ): Promise<UploadResult> {
-    const key = `uploads/${randomUUID()}/${filename}`;
+    // Generate a unique path to avoid collisions
+    const ext = filename.includes('.') ? filename.slice(filename.lastIndexOf('.')) : '';
+    const key = `${randomUUID()}${ext}`;
 
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: buffer,
-        ContentType: mimeType,
-      }),
-    );
+    const { data, error } = await this.supabase.storage
+      .from(BUCKET)
+      .upload(key, buffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (error) {
+      throw new Error(`File upload failed: ${error.message}`);
+    }
+
+    // Public URL
+    const { data: urlData } = this.supabase.storage
+      .from(BUCKET)
+      .getPublicUrl(key);
 
     return {
-      url: `${this.endpoint}/${this.bucket}/${key}`,
+      url: urlData.publicUrl,
       filename,
       size: buffer.length,
       mimeType,
