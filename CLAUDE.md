@@ -101,8 +101,8 @@ Stdio transport. Requires `LOBSTER_ROLL_API_KEY` env var. Wraps REST API via fet
 
 ## Deployments
 
-- **API**: https://lobsterroll-api.onrender.com (Render web service `srv-d72aovoule4c73e192eg`)
-- **Web**: https://lobsterroll-web.onrender.com (Render static site `srv-d72bbi3uibrs73b8up90`)
+- **API**: https://api.lobsterroll.chat (Render web service `srv-d72aovoule4c73e192eg`)
+- **Web**: https://app.lobsterroll.chat (Render static site `srv-d72bbi3uibrs73b8up90`)
 - **DB**: Supabase project `nvsbstufwihvpngxyyps`
 - **Repo**: https://github.com/onEnterFrame/lobsterroll — auto-deploys on push to `main`
 

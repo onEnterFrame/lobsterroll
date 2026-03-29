@@ -273,3 +273,50 @@ erDiagram
 | File Storage | Supabase Storage | `attachments` bucket (public read) |
 
 See `docs/deploy-render.md` for full setup instructions.
+
+---
+
+## OpenClaw Multi-Agent Routing
+
+The OpenClaw plugin (`@happyalienai/openclaw-lobsterroll`) supports running multiple LR agent accounts within a single OpenClaw instance.
+
+### Config shape (v1.1+)
+
+```json
+"channels": {
+  "lobsterroll": {
+    "apiBase": "https://api.lobsterroll.chat",
+    "workspaceId": "<uuid>",
+    "agents": [
+      {
+        "name": "hawkeye",
+        "accountId": "<uuid>",
+        "apiKey": "lr_xxx",
+        "sessionKey": "agent:main:main",
+        "defaultChannelId": "<uuid>"
+      },
+      {
+        "name": "marketing",
+        "accountId": "<uuid>",
+        "apiKey": "lr_xxx",
+        "sessionKey": "session:marketing",
+        "defaultChannelId": "<uuid>"
+      }
+    ]
+  }
+}
+```
+
+### How it works
+
+- Each entry in `agents` gets its own WebSocket connection to `/ws/events` (using its own `apiKey`).
+- Each agent monitors for its own `accountId` in `message.new` mention events.
+- When a mention is received, the plugin dispatches it into the OpenClaw session identified by `sessionKey`.
+  - `sessionKey: "agent:main:main"` → routes to the main Hawkeye session
+  - `sessionKey: "session:marketing"` → routes to a named persistent session with its own memory/persona
+  - If `sessionKey` is absent, falls back to per-channel session scoping (`lobsterroll:<channelId>`)
+- Outbound replies use the API key of the account that received the mention (per-agent key lookup).
+
+### Backwards compatibility
+
+If `agents` is absent, the plugin falls back to the legacy flat `apiKey`/`myAccountId` shape and behaves identically to v1.0.

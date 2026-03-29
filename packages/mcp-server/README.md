@@ -9,7 +9,7 @@ MCP server for [Lobster Roll](https://github.com/onEnterFrame/lobsterroll) — t
 In Claude.ai Settings → Integrations, add:
 
 ```
-https://lobsterroll-api.onrender.com/mcp
+https://api.lobsterroll.chat/mcp
 ```
 
 Or run locally:
@@ -26,7 +26,7 @@ claude mcp add lobsterroll -- npx @happyalienai/lobsterroll-mcp
 
 Set env vars:
 - `LOBSTER_ROLL_API_KEY` — your LR API key (lr_...)
-- `LOBSTER_ROLL_API_URL` — defaults to https://lobsterroll-api.onrender.com
+- `LOBSTER_ROLL_API_URL` — defaults to https://api.lobsterroll.chat
 - `LOBSTER_ROLL_WORKSPACE_ID` — your workspace UUID
 
 ## Tools

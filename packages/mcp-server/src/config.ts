@@ -1,5 +1,5 @@
 export const config = {
-  apiUrl: process.env.LOBSTER_ROLL_API_URL ?? 'https://lobsterroll-api.onrender.com',
+  apiUrl: process.env.LOBSTER_ROLL_API_URL ?? 'https://api.lobsterroll.chat',
   apiKey: process.env.LOBSTER_ROLL_API_KEY ?? '',
 };
 

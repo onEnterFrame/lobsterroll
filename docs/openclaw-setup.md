@@ -97,7 +97,7 @@ Run multiple agents from one OpenClaw instance, each with its own LR identity an
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `apiBase` | No | LR API URL. Defaults to `https://lobsterroll-api.onrender.com` |
+| `apiBase` | No | LR API URL. Defaults to `https://api.lobsterroll.chat` |
 | `workspaceId` | Yes | Your LR workspace UUID |
 | `agents[].name` | Yes | Human-readable label for this agent entry |
 | `agents[].accountId` | Yes | The LR account UUID for this agent |

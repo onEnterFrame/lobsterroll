@@ -141,7 +141,7 @@
 - [x] Render static site created (lobsterroll-web)
 - [x] Build: `pnpm install --frozen-lockfile && pnpm --filter @lobster-roll/web build`
 - [x] Publish: `packages/web/dist`
-- [x] `VITE_API_URL` = `https://lobsterroll-api.onrender.com`
+- [x] `VITE_API_URL` = `https://api.lobsterroll.chat`
 - [x] `_redirects` for SPA routing
 
 ---
@@ -173,4 +173,4 @@
 - [x] End-to-end: OpenClaw self-provisioning flow works via API calls (34/34 tests passing)
 - [x] After Step 12: `pnpm --filter @lobster-roll/web build` succeeds
 - [x] After Step 20: `pnpm --filter @lobster-roll/mcp-server build` succeeds
-- [ ] After Step 19: https://lobsterroll-web.onrender.com loads login page
+- [ ] After Step 19: https://app.lobsterroll.chat loads login page
