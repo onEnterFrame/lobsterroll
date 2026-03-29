@@ -1,4 +1,4 @@
-import { eq, and, desc, lt, ilike } from 'drizzle-orm';
+import { eq, and, desc, lt, ilike, isNull } from 'drizzle-orm';
 import { messages, mentionEvents, accounts, agentCallbacks, channels } from '@lobster-roll/db';
 import { AppError, ErrorCodes, parseMentions, MENTION_TIMEOUT_MS } from '@lobster-roll/shared';
 import type { CreateMessageInput, ListMessagesInput } from '@lobster-roll/shared';
@@ -117,10 +117,26 @@ export class MessageService {
   }
 
   async list(input: ListMessagesInput) {
+    // When fetching thread messages, filter by threadId.
+    // Otherwise, exclude thread replies (threadId IS NULL = top-level channel messages only).
+    if (input.threadId) {
+      let query = this.db
+        .select()
+        .from(messages)
+        .where(
+          and(eq(messages.channelId, input.channelId), eq(messages.threadId, input.threadId)),
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(input.limit);
+
+      return query;
+    }
+
+    // Base channel query: top-level messages only (no thread replies)
     let query = this.db
       .select()
       .from(messages)
-      .where(eq(messages.channelId, input.channelId))
+      .where(and(eq(messages.channelId, input.channelId), isNull(messages.threadId)))
       .orderBy(desc(messages.createdAt))
       .limit(input.limit);
 
@@ -139,23 +155,13 @@ export class MessageService {
           .where(
             and(
               eq(messages.channelId, input.channelId),
+              isNull(messages.threadId),
               lt(messages.createdAt, beforeMsg.createdAt),
             ),
           )
           .orderBy(desc(messages.createdAt))
           .limit(input.limit);
       }
-    }
-
-    if (input.threadId) {
-      query = this.db
-        .select()
-        .from(messages)
-        .where(
-          and(eq(messages.channelId, input.channelId), eq(messages.threadId, input.threadId)),
-        )
-        .orderBy(desc(messages.createdAt))
-        .limit(input.limit);
     }
 
     return query;
