@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/lobsterroll
+      DATABASE_URL: postgresql://lobsterroll:lobsterroll@postgres:5432/lobsterroll
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: minioadmin
@@ -17,26 +17,36 @@ services:
       API_PORT: 3000
       API_LOG_LEVEL: info
       MENTION_TIMEOUT_MS: 300000
+      WEB_URL: http://localhost:5173
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_URL: http://localhost:3000
+    depends_on:
+      - api
 
   postgres:
     image: postgres:17-alpine
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: lobsterroll
+      POSTGRES_PASSWORD: lobsterroll
       POSTGRES_DB: lobsterroll
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U lobsterroll"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -62,6 +72,8 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    profiles:
+      - storage  # Only start if you need local file storage (optional)
 
 volumes:
   postgres_data:

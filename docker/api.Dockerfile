@@ -33,5 +33,9 @@ COPY --from=build /app/packages/api/package.json packages/api/package.json
 COPY --from=build /app/package.json ./
 COPY --from=build /app/pnpm-workspace.yaml ./
 
+COPY --from=build /app/packages/db/drizzle packages/db/drizzle
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && apk add --no-cache postgresql-client
+
 EXPOSE 3000
-CMD ["node", "packages/api/dist/index.js"]
+ENTRYPOINT ["/entrypoint.sh"]

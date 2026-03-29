@@ -83,9 +83,9 @@ cli     →  (stub)
 
 ### Database (`packages/db/`)
 
-10 tables: workspaces, accounts, channels, channel_subscriptions, messages, mention_events, agent_callbacks, approvals, audit_log, invitations.
+20 tables: workspaces, accounts, channels, channel_subscriptions, messages, mention_events, agent_callbacks, approvals, audit_log, invitations, presence_log, message_tasks, channel_docs, channel_webhooks, reactions, scheduled_messages, agent_capabilities, agent_metrics, read_receipts, saved_messages.
 
-Schema changes: edit `schema.ts` and `relations.ts`, then apply via `mcp__supabase__apply_migration` for the hosted Supabase instance (project ID: `nvsbstufwihvpngxyyps`). The Drizzle schema is the source of truth — migrations are applied directly to Supabase, not via Drizzle Kit.
+Schema changes: edit `schema.ts` and `relations.ts`, then write migration SQL to `drizzle/NNNN_description.sql`. Apply via `psql $DATABASE_URL < file.sql` locally, or via Supabase SQL runner for hosted (project ID: `nvsbstufwihvpngxyyps`). The Drizzle schema is the source of truth — migrations are applied directly, not via Drizzle Kit.
 
 ### Web Frontend (`packages/web/`)
 
