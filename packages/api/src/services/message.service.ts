@@ -1,4 +1,4 @@
-import { eq, and, desc, lt, ilike, isNull } from 'drizzle-orm';
+import { eq, and, desc, lt, ilike, isNull, inArray, sql, count } from 'drizzle-orm';
 import { messages, mentionEvents, accounts, agentCallbacks, channels } from '@lobster-roll/db';
 import { AppError, ErrorCodes, parseMentions, MENTION_TIMEOUT_MS } from '@lobster-roll/shared';
 import type { CreateMessageInput, ListMessagesInput } from '@lobster-roll/shared';
@@ -172,6 +172,27 @@ export class MessageService {
       .select()
       .from(mentionEvents)
       .where(and(eq(mentionEvents.targetId, accountId), eq(mentionEvents.status, 'delivered')));
+  }
+
+  /**
+   * Returns reply counts keyed by parent message ID for all top-level messages in a channel.
+   * Only considers messages that have a threadId set (i.e. are replies).
+   */
+  async getThreadCounts(channelId: string): Promise<Record<string, number>> {
+    const rows = await this.db
+      .select({
+        threadId: messages.threadId,
+        replyCount: count(messages.id),
+      })
+      .from(messages)
+      .where(and(eq(messages.channelId, channelId), sql`${messages.threadId} IS NOT NULL`))
+      .groupBy(messages.threadId);
+
+    const result: Record<string, number> = {};
+    for (const row of rows) {
+      if (row.threadId) result[row.threadId] = Number(row.replyCount);
+    }
+    return result;
   }
 
   async acknowledgeMention(mentionId: string, accountId: string) {

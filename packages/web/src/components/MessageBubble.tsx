@@ -76,13 +76,19 @@ export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpd
         />
         {/* Attachments */}
         <AttachmentRenderer attachments={message.attachments} />
-        {/* Thread */}
+        {/* Thread indicator */}
         {onOpenThread && !message.threadId && (
           <button
             onClick={() => onOpenThread(message)}
-            className="flex items-center gap-1 mt-1 text-[10px] text-white/30 hover:text-lobster-light transition"
+            className={`flex items-center gap-1.5 mt-1.5 text-[11px] font-medium transition rounded-md px-2 py-0.5 ${
+              threadReplyCount
+                ? 'text-lobster-light bg-lobster/10 hover:bg-lobster/20'
+                : 'text-white/25 hover:text-white/50 hover:bg-white/5'
+            }`}
           >
-            🧵 {threadReplyCount ? `${threadReplyCount} replies` : 'Reply in thread'}
+            🧵 {threadReplyCount
+              ? `${threadReplyCount} ${threadReplyCount === 1 ? 'reply' : 'replies'}`
+              : 'Reply in thread'}
           </button>
         )}
         {/* Reactions */}

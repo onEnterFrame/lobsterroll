@@ -74,6 +74,20 @@ export default async function messageRoutes(fastify: FastifyInstance) {
   );
 
   fastify.get(
+    '/v1/messages/thread-counts',
+    { preHandler: [...preHandler, requirePermission('message:read')] },
+    async (request, reply) => {
+      const { channelId } = request.query as { channelId?: string };
+      if (!channelId) {
+        throw new AppError(ErrorCodes.VALIDATION_ERROR, 'channelId is required', 400);
+      }
+      const service = new MessageService(fastify.db, fastify.redis);
+      const counts = await service.getThreadCounts(channelId);
+      return reply.send(counts);
+    },
+  );
+
+  fastify.get(
     '/v1/messages/:id',
     { preHandler: [...preHandler, requirePermission('message:read')] },
     async (request, reply) => {

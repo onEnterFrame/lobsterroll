@@ -9,6 +9,7 @@ interface Props {
   accounts: Map<string, Account>;
   tasksMap: Map<string, MessageTask>;
   approvalsMap: Map<string, Approval>;
+  threadCounts: Record<string, number>;
   currentAccountId: string;
   isLoading: boolean;
   onTaskUpdate: (updated: MessageTask) => void;
@@ -17,7 +18,7 @@ interface Props {
   onOpenThread?: (message: Message) => void;
 }
 
-export function MessageList({ messages, accounts, tasksMap, approvalsMap, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate, onReactionsUpdate, onOpenThread }: Props) {
+export function MessageList({ messages, accounts, tasksMap, approvalsMap, threadCounts, currentAccountId, isLoading, onTaskUpdate, onApprovalUpdate, onReactionsUpdate, onOpenThread }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -86,6 +87,7 @@ export function MessageList({ messages, accounts, tasksMap, approvalsMap, curren
             accounts={accounts}
             onReactionsUpdate={onReactionsUpdate}
             onOpenThread={onOpenThread}
+            threadReplyCount={threadCounts[msg.id]}
           />
         );
       })}

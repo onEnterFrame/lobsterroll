@@ -29,6 +29,13 @@ export function Channel() {
   const { data: roster } = useRoster();
   const sendMessage = useSendMessage();
 
+  // Fetch thread reply counts for this channel
+  const { data: threadCounts } = useQuery<Record<string, number>>({
+    queryKey: ['thread-counts', channelId],
+    queryFn: () => api.get(`/v1/messages/thread-counts?channelId=${channelId}`),
+    enabled: !!channelId,
+  });
+
   // Fetch tasks for this channel
   const { data: channelTasks } = useQuery<MessageTask[]>({
     queryKey: ['tasks', channelId],
@@ -113,14 +120,21 @@ export function Channel() {
       handleNotificationEvent(event, currentAccount?.id ?? '', nameMap);
 
       if (event.type === 'message.new' && event.data.channelId === channelId) {
-        qc.setQueryData<{ messages: Message[]; nextCursor: string | null }>(
-          ['messages', channelId, undefined],
-          (old) => {
-            if (!old) return { messages: [event.data], nextCursor: null };
-            if (old.messages.some((m) => m.id === event.data.id)) return old;
-            return { ...old, messages: [...old.messages, event.data] };
-          },
-        );
+        if (event.data.threadId) {
+          // It's a thread reply — invalidate thread counts and the specific thread query
+          qc.invalidateQueries({ queryKey: ['thread-counts', channelId] });
+          qc.invalidateQueries({ queryKey: ['thread', event.data.threadId] });
+        } else {
+          // Top-level message — add to channel feed
+          qc.setQueryData<{ messages: Message[]; nextCursor: string | null }>(
+            ['messages', channelId, undefined],
+            (old) => {
+              if (!old) return { messages: [event.data], nextCursor: null };
+              if (old.messages.some((m) => m.id === event.data.id)) return old;
+              return { ...old, messages: [...old.messages, event.data] };
+            },
+          );
+        }
         const senderId = event.data.senderId;
         const currentRoster = qc.getQueryData<typeof roster>(['roster']);
         const knownIds = new Set<string>();
@@ -244,6 +258,7 @@ export function Channel() {
           accounts={accountsMap}
           tasksMap={tasksMap}
           approvalsMap={approvalsMap}
+          threadCounts={threadCounts ?? {}}
           currentAccountId={currentAccount?.id ?? ''}
           isLoading={isLoading}
           onTaskUpdate={handleTaskUpdate}
