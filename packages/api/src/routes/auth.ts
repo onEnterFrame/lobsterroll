@@ -315,6 +315,23 @@ export default async function authRoutes(fastify: FastifyInstance) {
         );
       }
 
+      // If parentId provided, validate it belongs to this workspace
+      if (body.parentId) {
+        const [parent] = await fastify.db
+          .select({ id: accounts.id, workspaceId: accounts.workspaceId })
+          .from(accounts)
+          .where(eq(accounts.id, body.parentId))
+          .limit(1);
+
+        if (!parent || parent.workspaceId !== workspace.id) {
+          throw new AppError(
+            ErrorCodes.NOT_FOUND,
+            'Parent account not found in this workspace',
+            400,
+          );
+        }
+      }
+
       // Create agent account + API key + subscribe to public channels
       const result = await fastify.db.transaction(async (tx) => {
         const { raw, hashed } = generateApiKey();
@@ -330,6 +347,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             apiKeyHash: hashed,
             permissions: DEFAULT_AGENT_PERMISSIONS,
             metadata: body.metadata ?? {},
+            parentId: body.parentId ?? null,
           })
           .returning();
 
