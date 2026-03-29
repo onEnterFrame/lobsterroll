@@ -37,6 +37,14 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaRecorderSupported = typeof window !== 'undefined' && 'MediaRecorder' in window;
+
   const filteredAccounts = mentionQuery !== null
     ? accounts.filter((a) =>
         a.displayName.toLowerCase().includes(mentionQuery.toLowerCase()),
@@ -145,6 +153,81 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
     setMentionQuery(null);
     onTypingStop?.();
   };
+
+  const formatElapsed = (secs: number): string => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleMicClick = useCallback(async () => {
+    if (isRecording) {
+      // Stop recording
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    // Start recording
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      console.warn('Microphone access denied');
+      return;
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/mp4';
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+    audioChunksRef.current = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      clearInterval(recordingTimerRef.current);
+      setIsRecording(false);
+      setRecordingSeconds(0);
+      stream.getTracks().forEach((t) => t.stop());
+
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const filename = `voice-${Date.now()}.${ext}`;
+
+      const formData = new FormData();
+      formData.append('file', blob, filename);
+
+      // Upload attachment + transcribe in parallel
+      const uploadPromise = apiUpload<MessageAttachment>('/v1/files/upload', formData.valueOf() as FormData).then(
+        (result) => setPendingFiles((prev) => [...prev, result]),
+      ).catch((err) => console.error('Voice upload failed:', err));
+
+      const transcribeFormData = new FormData();
+      transcribeFormData.append('file', blob, filename);
+      const transcribePromise = apiUpload<{ text: string }>('/v1/transcriptions', transcribeFormData)
+        .then((result) => {
+          if (result.text) {
+            setValue((prev) => prev ? `${prev} ${result.text}` : result.text);
+          }
+        })
+        .catch(() => {
+          // silently continue — audio attachment already queued
+        });
+
+      await Promise.all([uploadPromise, transcribePromise]);
+    };
+
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+    setRecordingSeconds(0);
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+  }, [isRecording]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -295,6 +378,25 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
           className="hidden"
           onChange={handleFileSelect}
         />
+
+        {/* Mic button — hidden if MediaRecorder not supported */}
+        {mediaRecorderSupported && (
+          <button
+            onClick={handleMicClick}
+            disabled={uploading}
+            className={`rounded-lg p-2 transition disabled:opacity-50 ${
+              isRecording
+                ? 'text-red-400 animate-pulse'
+                : 'text-white/30 hover:text-white/60 hover:bg-white/5'
+            }`}
+            title={isRecording ? 'Stop recording' : 'Record voice message'}
+          >
+            {isRecording ? '🔴' : '🎙️'}
+          </button>
+        )}
+        {isRecording && (
+          <span className="text-[10px] text-red-400 font-mono ml-1">{formatElapsed(recordingSeconds)}</span>
+        )}
 
         <textarea
           ref={inputRef}
