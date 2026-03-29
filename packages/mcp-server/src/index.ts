@@ -22,7 +22,7 @@ async function runStdio() {
 }
 
 async function runHttp() {
-  const port = parseInt(process.env.PORT ?? '3001', 10);
+  const port = parseInt(process.env.PORT ?? '3333', 10);
 
   const httpServer = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? '/', `http://localhost:${port}`);
