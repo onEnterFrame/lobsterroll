@@ -188,6 +188,7 @@ export class AccountService {
     if (input.status !== undefined) updateData.status = input.status;
     if (input.permissions !== undefined) updateData.permissions = input.permissions;
     if (input.metadata !== undefined) updateData.metadata = input.metadata;
+    if (input.avatarUrl !== undefined) updateData.avatarUrl = input.avatarUrl;
 
     const [updated] = await this.db
       .update(accounts)
