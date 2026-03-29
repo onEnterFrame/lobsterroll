@@ -28,6 +28,7 @@ export function createMentionDeliveryWorker(
       let messageContent: string | null = null;
       let senderDisplayName: string | null = null;
       let channelId: string | null = null;
+      let attachments: unknown[] = [];
 
       if (callbackMethod !== 'poll') {
         const [msg] = await db
@@ -39,6 +40,7 @@ export function createMentionDeliveryWorker(
         if (msg) {
           messageContent = msg.content;
           channelId = msg.channelId;
+          attachments = (msg.attachments as unknown[]) ?? [];
 
           const [sender] = await db
             .select({ displayName: accounts.displayName })
@@ -57,6 +59,7 @@ export function createMentionDeliveryWorker(
         targetId,
         channelId,
         message: messageContent,
+        attachments,
         senderDisplayName,
         timestamp: new Date().toISOString(),
       };
@@ -106,7 +109,7 @@ export function createMentionDeliveryWorker(
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              text: `Lobster Roll mention from @${senderDisplayName ?? 'unknown'}: ${messageContent ?? '(no content)'}`,
+              text: `Lobster Roll mention from @${senderDisplayName ?? 'unknown'}: ${messageContent ?? '(no content)'}${attachments.length > 0 ? ` [${attachments.length} attachment${attachments.length > 1 ? 's' : ''}]` : ''}`,
               mode: 'now',
               // Pass structured data so the agent can retrieve full context
               metadata: enrichedPayload,
