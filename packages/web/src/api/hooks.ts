@@ -30,6 +30,17 @@ export function useWorkspace(id: string) {
   });
 }
 
+export function useUpdateWorkspaceSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workspaceId, settings }: { workspaceId: string; settings: Record<string, unknown> }) =>
+      api.patch<{ settings: Record<string, unknown> }>(`/v1/workspaces/${workspaceId}/settings`, settings),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['workspace', vars.workspaceId] });
+    },
+  });
+}
+
 // ─── Channels ──────────────────────────────────────────────────────
 
 export function useChannels() {

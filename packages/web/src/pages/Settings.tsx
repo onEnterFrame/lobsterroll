@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useWorkspace, useInvitations, useCreateInvitation, useRevokeInvitation, useGenerateApiKey, useRotateProvisionToken } from '@/api/hooks';
+import { useWorkspace, useInvitations, useCreateInvitation, useRevokeInvitation, useGenerateApiKey, useRotateProvisionToken, useUpdateWorkspaceSettings } from '@/api/hooks';
 
 export function Settings() {
   const { currentAccount, workspaceId } = useAuth();
@@ -75,6 +75,11 @@ export function Settings() {
         {/* Agent invite (admin only) */}
         {currentAccount?.permissions?.includes('workspace:admin') && workspace && (
           <AgentInviteSection workspace={workspace} />
+        )}
+
+        {/* Whisper settings (admin only) */}
+        {currentAccount?.permissions?.includes('workspace:admin') && workspace && (
+          <WhisperSection workspace={workspace} workspaceId={workspaceId!} />
         )}
 
         {/* Invite teammates (admin only) */}
@@ -223,6 +228,120 @@ function AgentInviteSection({ workspace }: { workspace: import('@/types').Worksp
           </button>
         )}
       </div>
+    </section>
+  );
+}
+
+function WhisperSection({ workspace, workspaceId }: { workspace: import('@/types').Workspace; workspaceId: string }) {
+  const updateSettings = useUpdateWorkspaceSettings();
+  const [apiKey, setApiKey] = useState('');
+  const [enabled, setEnabled] = useState(workspace.settings?.whisperEnabled ?? false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+
+  const keyIsSet = workspace.settings?.openaiApiKeySet === true;
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSaved(false);
+    try {
+      await updateSettings.mutateAsync({
+        workspaceId,
+        settings: {
+          ...(apiKey ? { openaiApiKey: apiKey } : {}),
+          whisperEnabled: enabled,
+        },
+      });
+      setApiKey('');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: unknown) {
+      setError((err as Error).message ?? 'Failed to save');
+    }
+  };
+
+  const handleClear = async () => {
+    setError('');
+    try {
+      await updateSettings.mutateAsync({
+        workspaceId,
+        settings: { openaiApiKey: null, whisperEnabled: false },
+      });
+      setEnabled(false);
+    } catch (err: unknown) {
+      setError((err as Error).message ?? 'Failed to clear');
+    }
+  };
+
+  return (
+    <section className="rounded-xl bg-ocean-light border border-white/5 p-5 mb-6">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-sm font-semibold text-white/80">Voice Transcription</h2>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+          workspace.settings?.whisperEnabled
+            ? 'bg-status-ok/10 text-status-ok'
+            : 'bg-white/5 text-white/30'
+        }`}>
+          {workspace.settings?.whisperEnabled ? 'Whisper enabled' : 'Browser STT (default)'}
+        </span>
+      </div>
+      <p className="text-white/40 text-xs mb-4">
+        By default, voice recording uses the browser's built-in speech-to-text (Chrome/Edge only, no API key needed).
+        Add an OpenAI key to upgrade to Whisper — more accurate, cross-browser, and multi-language.
+      </p>
+
+      <form onSubmit={handleSave} className="space-y-4">
+        <div>
+          <label className="block text-xs text-white/50 mb-1.5">OpenAI API Key</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={keyIsSet ? '••••••••  (key saved — enter new key to replace)' : 'sk-...'}
+            className="w-full rounded-lg bg-ocean border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/25 focus:border-lobster focus:outline-none focus:ring-1 focus:ring-lobster transition font-mono"
+          />
+          {keyIsSet && (
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[11px] text-status-ok">✓ API key saved</span>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-[11px] text-status-danger/70 hover:text-status-danger transition"
+              >
+                Remove key & disable Whisper
+              </button>
+            </div>
+          )}
+        </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div
+            onClick={() => setEnabled((v) => !v)}
+            className={`relative w-9 h-5 rounded-full transition-colors ${
+              enabled ? 'bg-lobster' : 'bg-white/10'
+            }`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+              enabled ? 'translate-x-4' : 'translate-x-0'
+            }`} />
+          </div>
+          <span className="text-sm text-white/70">Enable Whisper transcription</span>
+        </label>
+
+        {error && <p className="text-sm text-status-danger">{error}</p>}
+
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={updateSettings.isPending || (!apiKey && !keyIsSet)}
+            className="rounded-lg bg-lobster px-4 py-2 text-sm font-semibold text-white transition hover:bg-lobster-light disabled:opacity-50"
+          >
+            {updateSettings.isPending ? 'Saving...' : 'Save'}
+          </button>
+          {saved && <span className="text-sm text-status-ok">Saved ✓</span>}
+        </div>
+      </form>
     </section>
   );
 }

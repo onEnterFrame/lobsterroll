@@ -10,6 +10,7 @@ interface Props {
   accounts: Account[];
   channelId?: string;
   currentAccountId?: string;
+  whisperEnabled?: boolean;
   onTypingStart?: () => void;
   onTypingStop?: () => void;
 }
@@ -28,7 +29,7 @@ function fileIcon(mime: string) {
   return '📎';
 }
 
-export function MessageInput({ onSend, disabled, accounts, channelId, currentAccountId, onTypingStart, onTypingStop }: Props) {
+export function MessageInput({ onSend, disabled, accounts, channelId, currentAccountId, whisperEnabled, onTypingStart, onTypingStop }: Props) {
   const [value, setValue] = useState('');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -44,6 +45,12 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
   const recordingTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaRecorderSupported = typeof window !== 'undefined' && 'MediaRecorder' in window;
+  // Browser Speech Recognition (fallback when Whisper not enabled)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const speechRecognitionRef = useRef<any>(null);
+  const browserSTTSupported = typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  const micSupported = mediaRecorderSupported || browserSTTSupported;
 
   const filteredAccounts = mentionQuery !== null
     ? accounts.filter((a) =>
@@ -161,13 +168,60 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
   };
 
   const handleMicClick = useCallback(async () => {
+    // ── Browser STT path (default when Whisper not enabled) ──────────────
+    if (!whisperEnabled) {
+      if (isRecording) {
+        speechRecognitionRef.current?.stop();
+        setIsRecording(false);
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const win = window as any;
+      const SpeechRecognitionAPI = win.SpeechRecognition ?? win.webkitSpeechRecognition;
+      if (!SpeechRecognitionAPI) return;
+
+      const recognition = new SpeechRecognitionAPI();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
+        const transcript = Array.from(Object.values(event.results) as { [key: number]: { transcript: string } }[])
+          .map((r) => r[0].transcript)
+          .join(' ')
+          .trim();
+        if (transcript) {
+          setValue((prev) => prev ? `${prev} ${transcript}` : transcript);
+        }
+      };
+
+      recognition.onerror = () => {
+        setIsRecording(false);
+        speechRecognitionRef.current = null;
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+        clearInterval(recordingTimerRef.current);
+        setRecordingSeconds(0);
+        speechRecognitionRef.current = null;
+      };
+
+      recognition.start();
+      speechRecognitionRef.current = recognition;
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+      return;
+    }
+
+    // ── Whisper path (MediaRecorder + OpenAI API) ─────────────────────────
     if (isRecording) {
-      // Stop recording
       mediaRecorderRef.current?.stop();
       return;
     }
 
-    // Start recording
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -224,10 +278,8 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
     mediaRecorderRef.current = recorder;
     setIsRecording(true);
     setRecordingSeconds(0);
-    recordingTimerRef.current = setInterval(() => {
-      setRecordingSeconds((s) => s + 1);
-    }, 1000);
-  }, [isRecording]);
+    recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+  }, [isRecording, whisperEnabled]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -380,7 +432,7 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
         />
 
         {/* Mic button — hidden if MediaRecorder not supported */}
-        {mediaRecorderSupported && (
+        {micSupported && (
           <button
             onClick={handleMicClick}
             disabled={uploading}

@@ -12,6 +12,12 @@ export type MentionStatus = 'delivered' | 'acknowledged' | 'responded' | 'timed_
 export type ApprovalStatus = 'pending' | 'approved' | 'denied';
 export type PresenceStatus = 'online' | 'idle' | 'offline' | 'dnd';
 
+export interface WorkspaceSettings {
+  openaiApiKey?: string;
+  openaiApiKeySet?: boolean;
+  whisperEnabled?: boolean;
+}
+
 export interface Workspace {
   id: string;
   name: string;
@@ -19,7 +25,7 @@ export interface Workspace {
   ownerId: string;
   provisioningMode: ProvisioningMode;
   agentProvisionToken: string;
-  settings: Record<string, unknown>;
+  settings: WorkspaceSettings;
   createdAt: string;
   updatedAt: string;
 }

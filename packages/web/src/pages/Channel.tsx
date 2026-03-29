@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMessages, useSendMessage, useRoster, useChannels } from '@/api/hooks';
+import { useMessages, useSendMessage, useRoster, useChannels, useWorkspace } from '@/api/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { MessageList } from '@/components/MessageList';
@@ -16,7 +16,8 @@ import type { Message, MessageTask, ChannelDoc, Approval, ReactionSummary, Accou
 
 export function Channel() {
   const { channelId } = useParams<{ channelId: string }>();
-  const { currentAccount } = useAuth();
+  const { currentAccount, workspaceId: currentWorkspaceId } = useAuth();
+  const { data: currentWorkspace } = useWorkspace(currentWorkspaceId ?? '');
   const qc = useQueryClient();
   const [showDocs, setShowDocs] = useState(false);
   const [threadMessage, setThreadMessage] = useState<Message | null>(null);
@@ -281,6 +282,7 @@ export function Channel() {
           accounts={allAccounts}
           channelId={channelId}
           currentAccountId={currentAccount?.id}
+          whisperEnabled={currentWorkspace?.settings?.whisperEnabled ?? false}
         />
       </div>
 
