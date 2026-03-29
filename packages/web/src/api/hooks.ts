@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from './client';
+import { api, apiUpload } from './client';
 import type {
   Account,
   Approval,
@@ -125,6 +125,27 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string; status?: string; displayName?: string }) =>
       api.patch<Account>(`/v1/accounts/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roster'] });
+    },
+  });
+}
+
+export function useUpdateAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, formData }: { id: string; formData: FormData }) =>
+      apiUpload<{ avatarUrl: string }>(`/v1/accounts/${id}/avatar`, formData),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roster'] });
+    },
+  });
+}
+
+export function useDeleteAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ avatarUrl: null }>(`/v1/accounts/${id}/avatar`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['roster'] });
     },

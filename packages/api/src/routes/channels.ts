@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/require-auth.js';
 import { workspaceContext } from '../middleware/workspace-context.js';
 import { requirePermission } from '../middleware/require-permission.js';
 import { ChannelService } from '../services/channel.service.js';
+import { connectionManager } from '../services/connection-manager.js';
 
 export default async function channelRoutes(fastify: FastifyInstance) {
   const preHandler = [requireAuth, workspaceContext];
@@ -15,6 +16,7 @@ export default async function channelRoutes(fastify: FastifyInstance) {
       const body = createChannelSchema.parse(request.body);
       const service = new ChannelService(fastify.db);
       const channel = await service.create(body, request.workspaceId!);
+      connectionManager.broadcastToWorkspace(request.workspaceId!, 'channel.created', channel);
       return reply.status(201).send(channel);
     },
   );

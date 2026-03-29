@@ -187,4 +187,7 @@ export type WsEvent =
   | { type: 'typing.stop'; data: { accountId: string; channelId: string } }
   | { type: 'message.edited'; data: Message }
   | { type: 'message.deleted'; data: { id: string; channelId: string } }
+  | { type: 'channel.created'; data: Channel }
+  | { type: 'channel.updated'; data: Channel }
+  | { type: 'channel.deleted'; data: { id: string } }
   | { type: 'pong' };

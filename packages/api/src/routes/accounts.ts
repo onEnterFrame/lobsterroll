@@ -3,12 +3,15 @@ import {
   createAccountSchema,
   batchCreateAccountsSchema,
   updateAccountSchema,
+  AppError,
+  ErrorCodes,
 } from '@lobster-roll/shared';
 import { requireAuth } from '../middleware/require-auth.js';
 import { workspaceContext } from '../middleware/workspace-context.js';
 import { requirePermission } from '../middleware/require-permission.js';
 import { AccountService } from '../services/account.service.js';
 import { WorkspaceService } from '../services/workspace.service.js';
+import { FileStorageService } from '../services/file-storage.js';
 
 export default async function accountRoutes(fastify: FastifyInstance) {
   const preHandler = [requireAuth, workspaceContext];
@@ -101,6 +104,51 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       const service = new AccountService(fastify.db);
       const roster = await service.getRoster(request.workspaceId!);
       return reply.send(roster);
+    },
+  );
+
+  // ─── Avatar upload ──────────────────────────────────────────────
+
+  fastify.post(
+    '/v1/accounts/:id/avatar',
+    { preHandler },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      if (request.currentAccount!.id !== id) {
+        throw new AppError(ErrorCodes.FORBIDDEN, 'You can only update your own avatar', 403);
+      }
+
+      const data = await request.file();
+      if (!data) {
+        return reply.status(400).send({ error: 'No file provided' });
+      }
+
+      const buffer = await data.toBuffer();
+      const storage = new FileStorageService(fastify.config);
+      const result = await storage.upload(buffer, data.filename, data.mimetype);
+
+      const service = new AccountService(fastify.db);
+      const account = await service.update(id, { avatarUrl: result.url }, request.workspaceId!);
+
+      return reply.send({ avatarUrl: account.avatarUrl });
+    },
+  );
+
+  fastify.delete(
+    '/v1/accounts/:id/avatar',
+    { preHandler },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      if (request.currentAccount!.id !== id) {
+        throw new AppError(ErrorCodes.FORBIDDEN, 'You can only update your own avatar', 403);
+      }
+
+      const service = new AccountService(fastify.db);
+      const account = await service.update(id, { avatarUrl: null }, request.workspaceId!);
+
+      return reply.send({ avatarUrl: account.avatarUrl });
     },
   );
 }

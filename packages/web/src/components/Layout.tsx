@@ -1,8 +1,12 @@
+import { useCallback } from 'react';
 import { NavLink, Outlet } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useChannels } from '@/api/hooks';
 import { usePresenceHeartbeat } from '@/hooks/usePresence';
 import { useNotificationPermission } from '@/hooks/useNotifications';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import type { WsEvent } from '@/types';
 
 const navItems = [
   { to: '/channels', label: 'Channels', icon: '#' },
@@ -46,11 +50,24 @@ function SidebarChannelList() {
 
 export function Layout() {
   const { currentAccount, logout } = useAuth();
+  const qc = useQueryClient();
 
   // Start presence heartbeat + idle detection for authenticated users
   usePresenceHeartbeat();
   // Request notification permission
   useNotificationPermission();
+
+  // Live channel list updates via WebSocket
+  const handleWsEvent = useCallback((event: WsEvent) => {
+    if (
+      event.type === 'channel.created' ||
+      event.type === 'channel.updated' ||
+      event.type === 'channel.deleted'
+    ) {
+      qc.invalidateQueries({ queryKey: ['channels'] });
+    }
+  }, [qc]);
+  useWebSocket(handleWsEvent);
 
   return (
     <div className="flex h-screen bg-ocean">

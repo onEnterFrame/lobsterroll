@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useWorkspace, useInvitations, useCreateInvitation, useRevokeInvitation, useGenerateApiKey, useRotateProvisionToken, useUpdateWorkspaceSettings } from '@/api/hooks';
+import { useWorkspace, useInvitations, useCreateInvitation, useRevokeInvitation, useGenerateApiKey, useRotateProvisionToken, useUpdateWorkspaceSettings, useUpdateAvatar, useDeleteAvatar } from '@/api/hooks';
+import { Avatar } from '@/components/Avatar';
 
 export function Settings() {
   const { currentAccount, workspaceId } = useAuth();
@@ -49,7 +50,10 @@ export function Settings() {
         {/* Current account */}
         <section className="rounded-xl bg-ocean-light border border-white/5 p-5 mb-6">
           <h2 className="text-sm font-semibold text-white/80 mb-4">Your Account</h2>
-          <div className="space-y-3">
+          {currentAccount && (
+            <AvatarUploadSection account={currentAccount} />
+          )}
+          <div className="space-y-3 mt-4">
             <div className="flex justify-between text-sm">
               <span className="text-white/50">Display Name</span>
               <span className="text-white">{currentAccount?.displayName}</span>
@@ -87,6 +91,93 @@ export function Settings() {
           <InviteSection workspaceId={workspaceId!} />
         )}
       </div>
+    </div>
+  );
+}
+
+function AvatarUploadSection({ account }: { account: import('@/types').Account }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const updateAvatar = useUpdateAvatar();
+  const deleteAvatar = useDeleteAvatar();
+  const [error, setError] = useState('');
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File must be under 5MB');
+      return;
+    }
+
+    setError('');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await updateAvatar.mutateAsync({ id: account.id, formData });
+    } catch (err: unknown) {
+      setError((err as Error).message ?? 'Upload failed');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemove = async () => {
+    setError('');
+    try {
+      await deleteAvatar.mutateAsync(account.id);
+    } catch (err: unknown) {
+      setError((err as Error).message ?? 'Remove failed');
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="relative group flex-shrink-0"
+        title="Change photo"
+      >
+        <Avatar
+          displayName={account.displayName}
+          avatarUrl={account.avatarUrl}
+          accountType={account.accountType}
+          size="lg"
+        />
+        <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-medium">
+          Edit
+        </span>
+      </button>
+      <div className="flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={updateAvatar.isPending}
+          className="text-xs text-lobster-light hover:text-lobster transition disabled:opacity-50"
+        >
+          {updateAvatar.isPending ? 'Uploading...' : 'Change photo'}
+        </button>
+        {account.avatarUrl && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={deleteAvatar.isPending}
+            className="text-xs text-white/30 hover:text-status-danger transition disabled:opacity-50"
+          >
+            {deleteAvatar.isPending ? 'Removing...' : 'Remove'}
+          </button>
+        )}
+        {error && <p className="text-xs text-status-danger">{error}</p>}
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
     </div>
   );
 }

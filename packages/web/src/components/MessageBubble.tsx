@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message, Account, ReactionSummary } from '@/types';
 import { useAccountPresence } from '@/hooks/usePresence';
 import { Avatar } from './Avatar';
@@ -20,8 +22,19 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function highlightMentions(content: string) {
-  return content.replace(/@([\w.-]+)/g, '<span class="text-lobster-light font-semibold">@$1</span>');
+/** Wraps @mentions in a markdown-safe placeholder that survives GFM parsing. */
+function preprocessMentions(content: string): string {
+  // Replace @mention with a span-like HTML that ReactMarkdown will pass through
+  return content.replace(/@([\w.-]+)/g, '**@$1**');
+}
+
+/** Custom renderer for strong nodes — detect @mention pattern and render highlighted span. */
+function MentionAwareStrong({ children, ...props }: React.ComponentPropsWithoutRef<'strong'>) {
+  const text = typeof children === 'string' ? children : '';
+  if (text.startsWith('@')) {
+    return <span className="text-lobster-light font-semibold">{text}</span>;
+  }
+  return <strong {...props}>{children}</strong>;
 }
 
 export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpdate, onOpenThread, threadReplyCount }: Props) {
@@ -72,8 +85,18 @@ export function MessageBubble({ message, sender, isOwn, accounts, onReactionsUpd
               ? 'bg-lobster text-white rounded-tr-sm'
               : 'bg-ocean-lighter text-white/90 rounded-tl-sm'
           }`}
-          dangerouslySetInnerHTML={{ __html: highlightMentions(message.content) }}
-        />
+        >
+          <div className="prose prose-invert prose-sm max-w-none prose-p:my-0.5 prose-pre:bg-black/30 prose-pre:text-xs prose-code:text-lobster-light prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                strong: MentionAwareStrong,
+              }}
+            >
+              {preprocessMentions(message.content)}
+            </ReactMarkdown>
+          </div>
+        </div>
         {/* Attachments */}
         <AttachmentRenderer attachments={message.attachments} />
         {/* Thread indicator */}
