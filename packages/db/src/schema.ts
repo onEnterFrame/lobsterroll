@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   jsonb,
+  integer,
   pgEnum,
   uniqueIndex,
   index,
@@ -35,6 +36,7 @@ export const mentionStatusEnum = pgEnum('mention_status', [
   'acknowledged',
   'responded',
   'timed_out',
+  'failed',
 ]);
 
 export const callbackMethodEnum = pgEnum('callback_method', ['webhook', 'websocket', 'poll', 'openclaw']);
@@ -177,6 +179,8 @@ export const mentionEvents = pgTable(
     ackedAt: timestamp('acked_at', { withTimezone: true }),
     respondedAt: timestamp('responded_at', { withTimezone: true }),
     timedOutAt: timestamp('timed_out_at', { withTimezone: true }),
+    failedAt: timestamp('failed_at', { withTimezone: true }),
+    failureReason: text('failure_reason'),
   },
   (table) => [
     index('mention_events_target_id_status_idx').on(table.targetId, table.status),
@@ -382,12 +386,12 @@ export const agentMetrics = pgTable(
     accountId: uuid('account_id')
       .primaryKey()
       .references(() => accounts.id, { onDelete: 'cascade' }),
-    messageCount: jsonb('message_count').notNull().default(0),
+    messageCount: integer('message_count').notNull().default(0),
     mentionResponseAvgMs: jsonb('mention_response_avg_ms'),
     lastActiveChannelId: uuid('last_active_channel_id'),
     lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
-    tasksCompleted: jsonb('tasks_completed').notNull().default(0),
-    tasksAssigned: jsonb('tasks_assigned').notNull().default(0),
+    tasksCompleted: integer('tasks_completed').notNull().default(0),
+    tasksAssigned: integer('tasks_assigned').notNull().default(0),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
 );

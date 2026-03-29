@@ -66,7 +66,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const service = new AccountService(fastify.db);
-      const account = await service.getById(id);
+      const account = await service.getById(id, request.workspaceId!);
       return reply.send(account);
     },
   );
@@ -78,7 +78,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string };
       const body = updateAccountSchema.parse(request.body);
       const service = new AccountService(fastify.db);
-      const account = await service.update(id, body);
+      const account = await service.update(id, body, request.workspaceId!);
       return reply.send(account);
     },
   );
@@ -89,7 +89,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const service = new AccountService(fastify.db);
-      const account = await service.deactivate(id);
+      const account = await service.deactivate(id, request.workspaceId!);
       return reply.send(account);
     },
   );

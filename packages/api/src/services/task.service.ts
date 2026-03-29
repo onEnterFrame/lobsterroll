@@ -43,7 +43,7 @@ export class TaskService {
       .values({
         channelId: input.channelId,
         senderId: assignerId,
-        content: input.title,
+        content: taskContent,
         mentions: [input.assigneeId],
         payload: { type: 'task' },
       })
@@ -62,9 +62,9 @@ export class TaskService {
       })
       .returning();
 
-    // Broadcast task created + message to channel
-    connectionManager.broadcast('message.new', message);
-    connectionManager.broadcast('task.created', task);
+    // Broadcast task created + message to workspace only
+    connectionManager.broadcastToWorkspace(assigner.workspaceId, 'message.new', message);
+    connectionManager.broadcastToWorkspace(assigner.workspaceId, 'task.created', task);
 
     // Notify assignee specifically
     connectionManager.send(input.assigneeId, 'task.assigned', task);
@@ -85,7 +85,8 @@ export class TaskService {
       .where(eq(messageTasks.id, taskId))
       .returning();
 
-    connectionManager.broadcast('task.updated', updated);
+    const workspaceId = await this.getWorkspaceId(accountId);
+    connectionManager.broadcastToWorkspace(workspaceId, 'task.updated', updated);
     return updated;
   }
 
@@ -106,7 +107,8 @@ export class TaskService {
       .where(eq(messageTasks.id, taskId))
       .returning();
 
-    connectionManager.broadcast('task.updated', updated);
+    const workspaceId = await this.getWorkspaceId(accountId);
+    connectionManager.broadcastToWorkspace(workspaceId, 'task.updated', updated);
     return updated;
   }
 
@@ -127,7 +129,8 @@ export class TaskService {
       .where(eq(messageTasks.id, taskId))
       .returning();
 
-    connectionManager.broadcast('task.updated', updated);
+    const workspaceId = await this.getWorkspaceId(accountId);
+    connectionManager.broadcastToWorkspace(workspaceId, 'task.updated', updated);
     return updated;
   }
 
@@ -164,6 +167,15 @@ export class TaskService {
     }
 
     return task;
+  }
+
+  private async getWorkspaceId(accountId: string): Promise<string> {
+    const [account] = await this.db
+      .select({ workspaceId: accounts.workspaceId })
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
+      .limit(1);
+    return account?.workspaceId ?? 'unknown';
   }
 
   private async getAndAuthorize(taskId: string, accountId: string) {

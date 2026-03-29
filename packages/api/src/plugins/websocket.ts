@@ -71,7 +71,15 @@ export default fp(
         return;
       }
 
-      connectionManager.add(accountId, socket);
+      // Look up the account's workspaceId so broadcasts stay workspace-scoped
+      const [connAccount] = await fastify.db
+        .select({ workspaceId: accounts.workspaceId })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .limit(1);
+
+      const workspaceId = connAccount?.workspaceId ?? 'unknown';
+      connectionManager.add(accountId, workspaceId, socket);
       fastify.log.info(`WebSocket connected: ${accountId}`);
 
       // Set presence to online on connect

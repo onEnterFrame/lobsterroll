@@ -1,11 +1,12 @@
 import { eq, and, desc, lt, ilike, isNull, inArray, sql, count } from 'drizzle-orm';
-import { messages, mentionEvents, accounts, agentCallbacks, channels } from '@lobster-roll/db';
+import { messages, mentionEvents, accounts, agentCallbacks, channels, channelSubscriptions } from '@lobster-roll/db';
 import { AppError, ErrorCodes, parseMentions, MENTION_TIMEOUT_MS } from '@lobster-roll/shared';
 import type { CreateMessageInput, ListMessagesInput } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
 import { Queue } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { ConnectionManager } from './connection-manager.js';
+import { MENTION_DELIVERY_JOB_OPTIONS } from '../workers/mention-delivery.worker.js';
 
 export class MessageService {
   private mentionDeliveryQueue: Queue;
@@ -89,14 +90,14 @@ export class MessageService {
         .where(eq(agentCallbacks.accountId, targetId))
         .limit(1);
 
-      // Enqueue delivery job
+      // Enqueue delivery job with retry options
       await this.mentionDeliveryQueue.add('deliver', {
         mentionEventId: event.id,
         messageId: message.id,
         targetId,
         callbackMethod: callback?.method ?? 'poll',
         callbackConfig: callback?.config ?? {},
-      });
+      }, MENTION_DELIVERY_JOB_OPTIONS);
 
       // Schedule timeout check
       await this.mentionTimeoutQueue.add(
@@ -106,17 +107,37 @@ export class MessageService {
       );
     }
 
-    // 4. Broadcast message.new to all connected clients in the workspace
-    // Broadcast to everyone — frontend filters by channelId client-side.
-    // This ensures users see new messages without needing explicit channel subscriptions.
-    if (this.connectionManager) {
-      this.connectionManager.broadcast('message.new', message);
+    // 4. Broadcast message.new to all connected clients in the workspace only.
+    if (this.connectionManager && channel) {
+      this.connectionManager.broadcastToWorkspace(channel.workspaceId, 'message.new', message);
     }
 
     return { message, mentionEvents: events };
   }
 
-  async list(input: ListMessagesInput) {
+  async validateChannelMembership(channelId: string, accountId: string): Promise<void> {
+    const [subscription] = await this.db
+      .select({ accountId: channelSubscriptions.accountId })
+      .from(channelSubscriptions)
+      .where(
+        and(
+          eq(channelSubscriptions.channelId, channelId),
+          eq(channelSubscriptions.accountId, accountId),
+        ),
+      )
+      .limit(1);
+
+    if (!subscription) {
+      throw new AppError(ErrorCodes.FORBIDDEN, 'Not subscribed to this channel', 403);
+    }
+  }
+
+  async list(input: ListMessagesInput & { requesterId?: string }) {
+    // Verify requester is subscribed to the channel
+    if (input.requesterId) {
+      await this.validateChannelMembership(input.channelId, input.requesterId);
+    }
+
     // When fetching thread messages, filter by threadId.
     // Otherwise, exclude thread replies (threadId IS NULL = top-level channel messages only).
     if (input.threadId) {
@@ -193,6 +214,73 @@ export class MessageService {
       if (row.threadId) result[row.threadId] = Number(row.replyCount);
     }
     return result;
+  }
+
+  async respondToMention(mentionId: string, accountId: string) {
+    const [event] = await this.db
+      .select()
+      .from(mentionEvents)
+      .where(eq(mentionEvents.id, mentionId))
+      .limit(1);
+
+    if (!event) {
+      throw new AppError(ErrorCodes.MENTION_NOT_FOUND, 'Mention event not found', 404);
+    }
+
+    if (event.targetId !== accountId) {
+      throw new AppError(ErrorCodes.MENTION_NOT_YOURS, 'You cannot respond to this mention', 403);
+    }
+
+    if (event.status === 'responded') {
+      throw new AppError(
+        ErrorCodes.MENTION_ALREADY_ACKED,
+        'Mention already marked as responded',
+        400,
+      );
+    }
+
+    const [updated] = await this.db
+      .update(mentionEvents)
+      .set({ status: 'responded', respondedAt: new Date() })
+      .where(eq(mentionEvents.id, mentionId))
+      .returning();
+
+    return updated;
+  }
+
+  async failMention(mentionId: string, accountId: string, reason: string) {
+    const [event] = await this.db
+      .select()
+      .from(mentionEvents)
+      .where(eq(mentionEvents.id, mentionId))
+      .limit(1);
+
+    if (!event) {
+      throw new AppError(ErrorCodes.MENTION_NOT_FOUND, 'Mention event not found', 404);
+    }
+
+    // Only the target agent or an admin (via permissions on the account) can fail a mention
+    if (event.targetId !== accountId) {
+      // Check if the caller is an admin by looking up their account
+      const [caller] = await this.db
+        .select({ permissions: accounts.permissions })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .limit(1);
+
+      const perms = (caller?.permissions as string[]) ?? [];
+      if (!perms.includes('workspace:admin')) {
+        throw new AppError(ErrorCodes.FORBIDDEN, 'Only the target agent or an admin can fail this mention', 403);
+      }
+    }
+
+    const [updated] = await this.db
+      .update(mentionEvents)
+      .set({ status: 'failed', failedAt: new Date(), failureReason: reason })
+      .where(eq(mentionEvents.id, mentionId))
+      .returning();
+
+    return updated;
   }
 
   async acknowledgeMention(mentionId: string, accountId: string) {

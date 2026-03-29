@@ -162,11 +162,15 @@ export class AccountService {
     return results;
   }
 
-  async getById(id: string) {
+  async getById(id: string, workspaceId?: string) {
     const [account] = await this.db
       .select()
       .from(accounts)
-      .where(eq(accounts.id, id))
+      .where(
+        workspaceId
+          ? and(eq(accounts.id, id), eq(accounts.workspaceId, workspaceId))
+          : eq(accounts.id, id),
+      )
       .limit(1);
 
     if (!account) {
@@ -176,8 +180,8 @@ export class AccountService {
     return account;
   }
 
-  async update(id: string, input: UpdateAccountInput) {
-    const account = await this.getById(id);
+  async update(id: string, input: UpdateAccountInput, workspaceId?: string) {
+    const account = await this.getById(id, workspaceId);
 
     const updateData: Record<string, unknown> = {};
     if (input.displayName !== undefined) updateData.displayName = input.displayName;
@@ -213,7 +217,10 @@ export class AccountService {
     return updated;
   }
 
-  async deactivate(id: string) {
+  async deactivate(id: string, workspaceId?: string) {
+    // Verify account belongs to the workspace before deactivating
+    await this.getById(id, workspaceId);
+
     // Cascade deactivation to sub-agents
     await this.cascadeDeactivation(id);
 

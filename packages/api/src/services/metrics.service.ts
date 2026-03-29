@@ -18,7 +18,7 @@ export class MetricsService {
       .onConflictDoUpdate({
         target: agentMetrics.accountId,
         set: {
-          messageCount: sql`(${agentMetrics.messageCount}::int + 1)::jsonb`,
+          messageCount: sql`${agentMetrics.messageCount} + 1`,
           lastActiveChannelId: channelId,
           lastMessageAt: new Date(),
           updatedAt: new Date(),
@@ -36,7 +36,7 @@ export class MetricsService {
       .onConflictDoUpdate({
         target: agentMetrics.accountId,
         set: {
-          tasksCompleted: sql`(${agentMetrics.tasksCompleted}::int + 1)::jsonb`,
+          tasksCompleted: sql`${agentMetrics.tasksCompleted} + 1`,
           updatedAt: new Date(),
         },
       });
@@ -52,7 +52,7 @@ export class MetricsService {
       .onConflictDoUpdate({
         target: agentMetrics.accountId,
         set: {
-          tasksAssigned: sql`(${agentMetrics.tasksAssigned}::int + 1)::jsonb`,
+          tasksAssigned: sql`${agentMetrics.tasksAssigned} + 1`,
           updatedAt: new Date(),
         },
       });

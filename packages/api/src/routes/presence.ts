@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import { eq } from 'drizzle-orm';
+import { accounts } from '@lobster-roll/db';
 import { updatePresenceSchema } from '@lobster-roll/shared';
+import { AppError, ErrorCodes } from '@lobster-roll/shared';
 import { requireAuth } from '../middleware/require-auth.js';
 import { workspaceContext } from '../middleware/workspace-context.js';
 import { PresenceService } from '../services/presence.service.js';
@@ -40,6 +43,18 @@ export default async function presenceRoutes(fastify: FastifyInstance) {
     { preHandler },
     async (request, reply) => {
       const { accountId } = request.params as { accountId: string };
+
+      // Verify the target account belongs to the requester's workspace (return 404 to avoid leaking existence)
+      const [targetAccount] = await fastify.db
+        .select({ workspaceId: accounts.workspaceId })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .limit(1);
+
+      if (!targetAccount || targetAccount.workspaceId !== request.workspaceId!) {
+        throw new AppError(ErrorCodes.NOT_FOUND, 'Account not found', 404);
+      }
+
       const service = new PresenceService(fastify.db);
       const info = await service.getPresence(accountId);
       return reply.send(info);

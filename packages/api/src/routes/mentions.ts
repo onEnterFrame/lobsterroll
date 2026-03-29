@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { AppError, ErrorCodes } from '@lobster-roll/shared';
 import { requireAuth } from '../middleware/require-auth.js';
 import { workspaceContext } from '../middleware/workspace-context.js';
 import { requirePermission } from '../middleware/require-permission.js';
@@ -24,6 +25,34 @@ export default async function mentionRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string };
       const service = new MessageService(fastify.db, fastify.redis);
       const event = await service.acknowledgeMention(id, request.currentAccount!.id);
+      return reply.send(event);
+    },
+  );
+
+  fastify.post(
+    '/v1/mentions/:id/respond',
+    { preHandler: [...preHandler, requirePermission('mention:ack')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const service = new MessageService(fastify.db, fastify.redis);
+      const event = await service.respondToMention(id, request.currentAccount!.id);
+      return reply.send(event);
+    },
+  );
+
+  fastify.post(
+    '/v1/mentions/:id/fail',
+    { preHandler: [...preHandler, requirePermission('mention:ack')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { reason?: string };
+
+      if (!body?.reason || typeof body.reason !== 'string' || body.reason.trim() === '') {
+        throw new AppError(ErrorCodes.VALIDATION_ERROR, 'reason is required', 400);
+      }
+
+      const service = new MessageService(fastify.db, fastify.redis);
+      const event = await service.failMention(id, request.currentAccount!.id, body.reason.trim());
       return reply.send(event);
     },
   );

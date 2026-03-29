@@ -169,8 +169,6 @@ export class PresenceService {
   }
 
   private broadcastPresenceChange(info: PresenceInfo, workspaceId: string): void {
-    // Broadcast to all connected clients (connection manager is workspace-unaware for now,
-    // so we broadcast to everyone — clients filter by relevance)
-    connectionManager.broadcast('presence.changed', info);
+    connectionManager.broadcastToWorkspace(workspaceId, 'presence.changed', info);
   }
 }

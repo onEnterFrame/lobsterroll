@@ -61,7 +61,7 @@ export default async function messageRoutes(fastify: FastifyInstance) {
       }
       const query = listMessagesSchema.parse(raw);
       const service = new MessageService(fastify.db, fastify.redis);
-      const messagesList = await service.list(query);
+      const messagesList = await service.list({ ...query, requesterId: request.currentAccount!.id });
 
       // Determine next cursor (last message ID if we got a full page)
       const nextCursor =
