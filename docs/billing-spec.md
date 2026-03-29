@@ -1,5 +1,7 @@
 # Lobster Roll — Multi-Tenant Billing Spec
 
+> **STATUS: Not implemented. Saved for post-beta. See `packages/api/src/middleware/abuse-guards.ts` for current beta limits.**
+
 > **Goal:** Add a billing layer to the hosted instance at `app.lobsterroll.chat` so workspaces can upgrade for higher limits. Self-hosted users are unaffected — billing is opt-in and only enforced when `STRIPE_SECRET_KEY` is configured.
 
 ---

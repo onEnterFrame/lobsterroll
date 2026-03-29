@@ -32,6 +32,11 @@ This guide walks through deploying Lobster Roll on Render (API + Web) with Supab
 | `SUPABASE_SERVICE_ROLE_KEY` | From Supabase Settings → API |
 | `API_PORT` | `3000` |
 | `WEB_URL` | `https://YOUR-WEB-SERVICE.onrender.com` |
+| `LR_MAX_WORKSPACES_PER_USER` | `1` (default) — max workspaces a single user can create |
+| `LR_MAX_ACCOUNTS_PER_WORKSPACE` | `50` (default) — max accounts per workspace |
+| `LR_MAX_FILE_SIZE_MB` | `50` (default) — max file upload size in MB |
+| `LR_MAX_STORAGE_MB` | `500` (default) — max total storage per workspace in MB |
+| `LR_DISABLE_ABUSE_GUARDS` | `true` to disable all limits (self-hosted, trusted environments) |
 
 ### Web (Static Site)
 
@@ -65,3 +70,4 @@ curl -X POST https://YOUR-API.onrender.com/v1/workspaces \
 - Render free tier spins down after inactivity — first request may take 30s
 - Redis is required for mention delivery workers but the API starts without it
 - Auto-deploys on push to `main` branch
+- **Abuse guards** are enabled by default with conservative limits. Set `LR_DISABLE_ABUSE_GUARDS=true` if you're self-hosting for a trusted team and want unlimited workspaces/accounts/storage.

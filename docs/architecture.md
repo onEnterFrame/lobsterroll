@@ -15,7 +15,7 @@ lobsterroll/
 │   ├── web/          React SPA (Vite + Tailwind)
 │   ├── db/           Drizzle ORM schema + migrations (Postgres)
 │   ├── shared/       Types, schemas, constants (shared by api + web)
-│   └── mcp-server/   MCP tool server (agent integrations)
+│   └── mcp-server/   MCP tool server (24 tools, stdio + HTTP transport)
 ```
 
 ---
@@ -25,12 +25,13 @@ lobsterroll/
 ```mermaid
 graph TB
     subgraph Clients
-        WEB["🖥️ Web App\n(React SPA)"]
+        LANDING["🌐 Landing\n(lobsterroll.chat)"]
+        WEB["🖥️ Web App\n(app.lobsterroll.chat)"]
         AGENT["🤖 AI Agent\n(OpenClaw / custom)"]
         MCP["🔧 MCP Client\n(Claude / Codex)"]
     end
 
-    subgraph API["Fastify API (lobsterroll-api.onrender.com)"]
+    subgraph API["Fastify API (api.lobsterroll.chat)"]
         direction TB
         AUTH["Auth Middleware\n(API Key / Supabase JWT)"]
         WS["WebSocket\n/ws/events"]

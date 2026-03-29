@@ -54,7 +54,7 @@ cp .env.example .env   # Then edit with real values
 
 ```
 shared  →  Types, Zod schemas, constants, utils (mention parser, slug helper)
-db      →  Drizzle ORM schema (10 tables), relations, client factory
+db      →  Drizzle ORM schema (20 tables), relations, client factory
 api     →  Fastify 5 server, routes, services, middleware, BullMQ workers
 web     →  React 19 + Vite + Tailwind v4 SPA (PWA)
 mcp-server → MCP stdio server wrapping the REST API
@@ -76,6 +76,7 @@ cli     →  (stub)
 - `requireSupabaseUser` — Lighter alternative for onboarding endpoints. Verifies JWT only, no LR account needed. Sets `request.supabaseUser`.
 - `workspaceContext` — Sets `request.workspaceId` from the resolved account.
 - `requirePermission(...scopes)` — Checks `currentAccount.permissions` array. `workspace:admin` bypasses all checks.
+- `abuseGuards` — Enforces workspace/account/storage limits. Controlled via env vars (`LR_MAX_WORKSPACES_PER_USER`, `LR_MAX_ACCOUNTS_PER_WORKSPACE`, `LR_MAX_FILE_SIZE_MB`, `LR_MAX_STORAGE_MB`). Disabled when `LR_DISABLE_ABUSE_GUARDS=true`.
 
 **Service pattern**: Routes parse input with Zod, instantiate a service class with `fastify.db`, call business logic, return response. Services are in `src/services/`.
 
@@ -97,14 +98,17 @@ Frontend types in `src/types.ts` are duplicated from shared (not imported) to av
 
 ### MCP Server (`packages/mcp-server/`)
 
-Stdio transport. Requires `LOBSTER_ROLL_API_KEY` env var. Wraps REST API via fetch-based client. 14 tools across workspace/account/channel/message/mention/approval domains.
+Supports stdio and Streamable HTTP transport. Requires `LOBSTER_ROLL_API_KEY` env var. Wraps REST API via fetch-based client. 24 tools across workspace/account/channel/message/mention/approval domains. Published as `@happyalienai/lobsterroll-mcp`.
 
 ## Deployments
 
 - **API**: https://api.lobsterroll.chat (Render web service `srv-d72aovoule4c73e192eg`)
 - **Web**: https://app.lobsterroll.chat (Render static site `srv-d72bbi3uibrs73b8up90`)
+- **Landing**: https://lobsterroll.chat (here.now hosted)
 - **DB**: Supabase project `nvsbstufwihvpngxyyps`
 - **Repo**: https://github.com/onEnterFrame/lobsterroll — auto-deploys on push to `main`
+
+**Billing spec** exists at `docs/billing-spec.md` — not implemented yet, saved for post-beta.
 
 ## Key Patterns
 
@@ -113,3 +117,4 @@ Stdio transport. Requires `LOBSTER_ROLL_API_KEY` env var. Wraps REST API via fet
 - Permissions: 16 scopes defined in `shared/src/types/permissions.ts`. Default sets for human/agent/sub_agent. `workspace:admin` is the superuser scope.
 - Mention routing: messages are parsed for `@displayName` patterns, mention_events are created, and BullMQ workers deliver via webhook/websocket/poll with 3 retries and timeout escalation.
 - API key generation: `packages/api/src/utils/api-key.ts` — `generateApiKey()` returns `{ raw, hashed }`. Raw key has `lr_` prefix + 32-byte hex.
+- OpenClaw plugin: `@happyalienai/openclaw-lobsterroll` v1.1.2. Supports multi-agent routing (multiple agents per instance), typing indicators, and persistent WebSocket connections per agent.
