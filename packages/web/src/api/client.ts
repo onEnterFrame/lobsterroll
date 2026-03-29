@@ -99,6 +99,36 @@ export const api = {
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
+/**
+ * Upload a file (multipart/form-data) with proper auth headers.
+ * Does NOT set Content-Type — lets the browser set it including the boundary.
+ */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const apiKey = getApiKey();
+  const headers: Record<string, string> = {};
+
+  if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  } else if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    const wsId = getSelectedWorkspaceId();
+    if (wsId) headers['X-Workspace-Id'] = wsId;
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ code: 'UNKNOWN', message: res.statusText }));
+    throw new ApiError(res.status, body.code ?? 'UNKNOWN', body.message ?? res.statusText);
+  }
+
+  return res.json();
+}
+
 // ─── WebSocket connection ───────────────────────────────────────────
 
 export function createWsConnection(onEvent: (event: unknown) => void): WebSocket | null {

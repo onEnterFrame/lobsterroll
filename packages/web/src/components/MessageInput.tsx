@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Account, MessageAttachment } from '@/types';
-import { api } from '@/api/client';
+import { api, apiUpload } from '@/api/client';
 import { parseSlashCommand, SLASH_COMMANDS } from '@/utils/slash-commands';
 import type { SlashContext } from '@/utils/slash-commands';
 
@@ -157,23 +157,8 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
       try {
         const formData = new FormData();
         formData.append('file', file);
-
-        // Upload via fetch (multipart) — api helper doesn't handle FormData
-        const apiKey = localStorage.getItem('lr_api_key');
-        const headers: Record<string, string> = {};
-        if (apiKey) headers['x-api-key'] = apiKey;
-
-        const apiUrl = import.meta.env.VITE_API_URL ?? '';
-        const res = await fetch(`${apiUrl}/v1/files/upload`, {
-          method: 'POST',
-          headers,
-          body: formData,
-        });
-
-        if (res.ok) {
-          const result: MessageAttachment = await res.json();
-          uploaded.push(result);
-        }
+        const result = await apiUpload<MessageAttachment>('/v1/files/upload', formData);
+        uploaded.push(result);
       } catch (err) {
         console.error('Upload failed:', err);
       }
