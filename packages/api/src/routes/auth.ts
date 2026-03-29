@@ -21,6 +21,7 @@ import { requireSupabaseUser } from '../middleware/require-supabase-user.js';
 import { requireAuth } from '../middleware/require-auth.js';
 import { generateApiKey } from '../utils/api-key.js';
 import { generateProvisionToken } from '../utils/provision-token.js';
+import { guardWorkspaceCreation, guardAccountCreation } from '../middleware/abuse-guards.js';
 import { InvitationService } from '../services/invitation.service.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
@@ -77,7 +78,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
    */
   fastify.post(
     '/v1/auth/setup-workspace',
-    { preHandler: [requireSupabaseUser] },
+    { preHandler: [requireSupabaseUser, guardWorkspaceCreation] },
     async (request, reply) => {
       const body = setupWorkspaceSchema.parse(request.body);
       const { id: supabaseUserId, email } = request.supabaseUser!;
@@ -314,6 +315,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
           403,
         );
       }
+
+      // Abuse guard: check account cap
+      (request as any)._abuseGuardWorkspaceId = workspace.id;
+      await guardAccountCreation(request, reply);
 
       // If parentId provided, validate it belongs to this workspace
       if (body.parentId) {

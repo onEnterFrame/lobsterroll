@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/require-auth.js';
 import { workspaceContext } from '../middleware/workspace-context.js';
 import { requirePermission } from '../middleware/require-permission.js';
 import { FileStorageService } from '../services/file-storage.js';
+import { guardFileSize, guardStorageLimit } from '../middleware/abuse-guards.js';
 
 export default async function fileRoutes(fastify: FastifyInstance) {
   const preHandler = [requireAuth, workspaceContext, requirePermission('file:upload')];
@@ -17,6 +18,11 @@ export default async function fileRoutes(fastify: FastifyInstance) {
       }
 
       const buffer = await data.toBuffer();
+
+      // Abuse guards: file size + workspace storage
+      guardFileSize(buffer.length);
+      await guardStorageLimit(fastify.db, request.workspaceId!, buffer.length);
+
       const storage = new FileStorageService(fastify.config);
       const result = await storage.upload(buffer, data.filename, data.mimetype);
 

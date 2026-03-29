@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { guardAccountCreation } from '../middleware/abuse-guards.js';
 import {
   createAccountSchema,
   batchCreateAccountsSchema,
@@ -18,7 +19,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/v1/accounts',
-    { preHandler },
+    { preHandler: [...preHandler, guardAccountCreation] },
     async (request, reply) => {
       const body = createAccountSchema.parse(request.body);
       const workspaceService = new WorkspaceService(fastify.db);
