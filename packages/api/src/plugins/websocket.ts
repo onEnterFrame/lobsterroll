@@ -106,15 +106,15 @@ export default fp(
           if (data.type === 'ping') {
             socket.send(JSON.stringify({ type: 'pong' }));
           }
-          // Typing indicators — broadcast to other clients
+          // Typing indicators — broadcast workspace-scoped to other clients
           if (data.type === 'typing.start' && data.channelId) {
-            connectionManager.broadcast('typing.start', {
+            connectionManager.broadcastToWorkspace(workspaceId, 'typing.start', {
               accountId: accountId!,
               channelId: data.channelId,
             });
           }
           if (data.type === 'typing.stop' && data.channelId) {
-            connectionManager.broadcast('typing.stop', {
+            connectionManager.broadcastToWorkspace(workspaceId, 'typing.stop', {
               accountId: accountId!,
               channelId: data.channelId,
             });
