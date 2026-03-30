@@ -33,6 +33,6 @@ export default async function healthRoutes(fastify: FastifyInstance) {
       return reply.status(503).send({ status: 'not_ready', reason: 'redis' });
     }
 
-    return { status: 'ready' };
+    return { status: 'ready', db: true, redis: true };
   });
 }
