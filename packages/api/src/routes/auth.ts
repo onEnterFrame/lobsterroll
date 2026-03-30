@@ -317,7 +317,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
 
       // Abuse guard: check account cap
-      (request as any)._abuseGuardWorkspaceId = workspace.id;
+      request._abuseGuardWorkspaceId = workspace.id;
       await guardAccountCreation(request, reply);
 
       // If parentId provided, validate it belongs to this workspace

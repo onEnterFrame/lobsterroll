@@ -176,8 +176,10 @@ export function MessageInput({ onSend, disabled, accounts, channelId, currentAcc
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const win = window as any;
+      const win = window as Window & {
+        SpeechRecognition?: new () => SpeechRecognition;
+        webkitSpeechRecognition?: new () => SpeechRecognition;
+      };
       const SpeechRecognitionAPI = win.SpeechRecognition ?? win.webkitSpeechRecognition;
       if (!SpeechRecognitionAPI) return;
 

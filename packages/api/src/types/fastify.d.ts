@@ -20,5 +20,6 @@ declare module 'fastify' {
     } | null;
     workspaceId: string | null;
     supabaseUser: { id: string; email: string } | null;
+    _abuseGuardWorkspaceId?: string;
   }
 }
