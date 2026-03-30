@@ -1,7 +1,7 @@
 import { eq, and, desc } from 'drizzle-orm';
 import { messageTasks, messages, accounts } from '@lobster-roll/db';
 import { AppError, ErrorCodes } from '@lobster-roll/shared';
-import type { CreateTaskInput } from '@lobster-roll/shared';
+import type { CreateTaskInput, TaskStatus } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
 import { connectionManager } from './connection-manager.js';
 
@@ -134,10 +134,10 @@ export class TaskService {
     return updated;
   }
 
-  async listForAssignee(assigneeId: string, status?: string) {
+  async listForAssignee(assigneeId: string, status?: TaskStatus) {
     const conditions = [eq(messageTasks.assigneeId, assigneeId)];
     if (status) {
-      conditions.push(eq(messageTasks.status, status as any));
+      conditions.push(eq(messageTasks.status, status));
     }
 
     return this.db

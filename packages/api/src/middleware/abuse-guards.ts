@@ -64,7 +64,7 @@ export async function guardAccountCreation(request: FastifyRequest, _reply: Fast
 
   // For agent-join, workspace ID comes from the provision token lookup (not middleware).
   // We'll get it from workspaceId or body.
-  const workspaceId = request.workspaceId ?? (request as any)._abuseGuardWorkspaceId;
+  const workspaceId = request.workspaceId ?? request._abuseGuardWorkspaceId;
   if (!workspaceId) return; // will be caught by route logic
 
   const [result] = await request.server.db

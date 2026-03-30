@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { approvals } from '@lobster-roll/db';
 import { AppError, ErrorCodes } from '@lobster-roll/shared';
+import type { CreateAccountInput } from '@lobster-roll/shared';
 import type { Database } from '@lobster-roll/db';
 import { AccountService } from './account.service.js';
 
@@ -54,7 +55,7 @@ export class ApprovalService {
       const actionData = updated.actionData as Record<string, unknown>;
       const accountService = new AccountService(this.db);
       const result = await accountService.create(
-        actionData as any,
+        actionData as CreateAccountInput,
         actionData.workspaceId as string,
         updated.requesterId,
         'open', // bypass supervised mode since already approved
