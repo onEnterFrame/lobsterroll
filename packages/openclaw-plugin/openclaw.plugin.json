@@ -1,0 +1,43 @@
+{
+  "id": "lobsterroll",
+  "kind": "channel",
+  "channels": ["lobsterroll"],
+  "name": "Lobster Roll",
+  "description": "Lobster Roll channel plugin for OpenClaw",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "lobsterroll": {
+        "type": "object",
+        "properties": {
+          "apiKey": { "type": "string" },
+          "apiBase": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "myAccountId": { "type": "string" },
+          "defaultChannelId": { "type": "string" },
+          "allowFrom": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "dmPolicy": { "type": "string" },
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "accountId": { "type": "string" },
+                "apiKey": { "type": "string" },
+                "sessionKey": { "type": "string" },
+                "defaultChannelId": { "type": "string" }
+              },
+              "required": ["name", "accountId", "apiKey"]
+            }
+          }
+        },
+        "required": ["workspaceId"]
+      }
+    }
+  }
+}

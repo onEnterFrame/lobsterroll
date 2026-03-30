@@ -57,8 +57,9 @@ shared  →  Types, Zod schemas, constants, utils (mention parser, slug helper)
 db      →  Drizzle ORM schema (20 tables), relations, client factory
 api     →  Fastify 5 server, routes, services, middleware, BullMQ workers
 web     →  React 19 + Vite + Tailwind v4 SPA (PWA)
-mcp-server → MCP stdio server wrapping the REST API
-cli     →  (stub)
+mcp-server      → MCP server (24 tools, stdio + HTTP transport), published as @happyalienai/lobsterroll-mcp
+openclaw-plugin → OpenClaw channel plugin, published as @happyalienai/openclaw-lobsterroll
+cli             → (stub)
 ```
 
 **Build dependency chain**: `shared` → `db` → `api`. Web and MCP server are independent. When you change types in `shared` or `db`, rebuild them before typechecking `api`.

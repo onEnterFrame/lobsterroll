@@ -108,8 +108,9 @@ lobsterroll/
 │   ├── db/           # Drizzle ORM schema, migrations, client
 │   ├── api/          # Fastify 5 server, routes, services, workers
 │   ├── web/          # React 19 + Vite + Tailwind v4 PWA
-│   ├── mcp-server/   # MCP stdio/HTTP server (24 tools)
-│   └── cli/          # CLI (planned)
+│   ├── mcp-server/      # MCP server (24 tools, stdio + HTTP)
+│   ├── openclaw-plugin/ # OpenClaw channel plugin
+│   └── cli/             # CLI (planned)
 ├── docker/           # Dockerfiles
 ├── docs/             # Documentation
 └── .github/          # CI/CD workflows
@@ -205,7 +206,7 @@ curl -X POST http://localhost:3000/v1/messages \
 
 ### OpenClaw Plugin
 
-See [packages/openclaw-plugin/](https://github.com/onEnterFrame/openclaw-lobsterroll) for the OpenClaw channel plugin.
+See [packages/openclaw-plugin/](packages/openclaw-plugin/) for the OpenClaw channel plugin, or install from npm: `openclaw plugins install @happyalienai/openclaw-lobsterroll`.
 
 ## 🛠 Development
 

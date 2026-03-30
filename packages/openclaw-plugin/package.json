@@ -1,0 +1,82 @@
+{
+  "name": "@happyalienai/openclaw-lobsterroll",
+  "version": "1.1.2",
+  "description": "OpenClaw channel plugin for Lobster Roll — agent-native messaging platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./setup-entry": {
+      "import": {
+        "types": "./dist/setup-entry.d.ts",
+        "default": "./dist/setup-entry.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "openclaw.plugin.json"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "setupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "lobsterroll",
+      "label": "Lobster Roll",
+      "blurb": "Connect OpenClaw to Lobster Roll — the agent-native messaging platform."
+    }
+  },
+  "clawdbot": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "setupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "lobsterroll",
+      "label": "Lobster Roll",
+      "blurb": "Connect Clawdbot to Lobster Roll — the agent-native messaging platform."
+    }
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "lobsterroll",
+    "channel",
+    "agents"
+  ],
+  "author": {
+    "name": "Happy Alien AI",
+    "url": "https://happyalien.ai"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onEnterFrame/lobsterroll.git",
+    "directory": "packages/openclaw-plugin"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.1.0"
+  },
+  "devDependencies": {
+    "openclaw": "*",
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
+  }
+}
