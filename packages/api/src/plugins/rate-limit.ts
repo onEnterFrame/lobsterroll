@@ -7,6 +7,17 @@ export default fp(
     await fastify.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
+      addHeaders: {
+        'x-ratelimit-limit': true,
+        'x-ratelimit-remaining': true,
+        'x-ratelimit-reset': true,
+        'retry-after': true,
+      },
+      addHeadersOnExceeding: {
+        'x-ratelimit-limit': true,
+        'x-ratelimit-remaining': true,
+        'x-ratelimit-reset': true,
+      },
     });
   },
   { name: 'rate-limit' },
