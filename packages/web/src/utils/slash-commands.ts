@@ -136,6 +136,22 @@ export const SLASH_COMMANDS: SlashCommand[] = [
       return { handled: true, message: `DM sent to ${match[1]}` };
     },
   },
+  {
+    name: '/help',
+    description: 'Show available commands',
+    usage: '/help',
+    handler: async (_args, ctx) => {
+      const lines = ['**Available commands:**'];
+      for (const cmd of SLASH_COMMANDS) {
+        lines.push(`\`${cmd.usage}\` — ${cmd.description}`);
+      }
+      await api.post('/v1/messages', {
+        channelId: ctx.channelId,
+        content: lines.join('\n'),
+      });
+      return { handled: true };
+    },
+  },
 ];
 
 export function parseSlashCommand(input: string): { command: SlashCommand; args: string } | null {
